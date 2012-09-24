@@ -376,15 +376,15 @@ int main(int argc, char**argv)
   void print_result_sv(double date, double ddot, double idot, double hdot, double xdot, double ydot, double zdot, double fdot);
   void print_result_file(FILE *outf, double d, double i, double h, double x, double y, double z, double f,
                          double ddot, double idot, double hdot, double xdot, double ydot, double zdot, double fdot);
-  double degrees_to_decimal();
-  double julday();
-  int   interpsh();
-  int   extrapsh();
-  int   shval3();
-  int   dihf();
+  double degrees_to_decimal(int deg, int min, int sec);
+  double julday(int month, int day, int year);
+  int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2, int gh);
+  int extrapsh(double date, double dte1, int nmax1, int nmax2, int gh);
+  int shval3(int igdgc, double flat, double flon, double elev, int nmax,
+             int gh, int iext, double ext1, double ext2, double ext3);
+  int dihf (int gh);
   int   safegets(char *buffer,int n);
-  int getshc();
-
+  int getshc(char file[PATH], int iflag, long strec, int nmax_of_gh, int gh);
 
   /* Initializations. */
   
@@ -469,7 +469,7 @@ int main(int argc, char**argv)
   
   while (again == 1)
     {
-      if (coords_from_file) 
+      if (coords_from_file)
         {
           argc = 7;
           read_flag = fscanf(coordfile,"%s%s%s%s%s%*[^\n]",args[2],args[3],args[4],args[5],args[6]);
@@ -497,14 +497,14 @@ int main(int argc, char**argv)
                   rest++;
                   ilon_min=atoi(begin);
                   ilon_sec=atoi(rest);
-                } 
-              else 
+                }
+              else
                 {
                   ilon_min=0;
                   ilon_sec=0;
                 }
-            } 
-          else 
+            }
+          else
             {
               decdeg=1;                        /* Else it's decimal */
               longitude=atof(args[6]);
@@ -525,14 +525,14 @@ int main(int argc, char**argv)
                   rest++;
                   ilat_min=atoi(begin);
                   ilat_sec=atoi(rest);
-                } 
-              else 
+                }
+              else
                 {
                   ilat_min=0;
                   ilat_sec=0;
                 }
             }
-          else 
+          else
             {
               decdeg=1;
               latitude=atof(args[5]);
@@ -581,8 +581,8 @@ int main(int argc, char**argv)
                       rest++;
                       iemonth=atoi(begin);
                       ieday=atoi(rest);
-                    } 
-                  else 
+                    }
+                  else
                     {
                       iemonth=0;
                       ieday=0;
@@ -600,26 +600,26 @@ int main(int argc, char**argv)
                           rest++;
                           ismonth=atoi(begin);
                           isday=atoi(rest);
-                        } 
-                      else 
+                        }
+                      else
                         {
                           ismonth=0;
                           isday=0;
                         }
-                    } 
-                  else 
+                    }
+                  else
                     {
                       sdate=atof(inbuff);
                     }
-                } 
-              else 
+                }
+              else
                 {
                   decyears=1;                    /* Else it's decimal years */
                   sdate=atof(inbuff);
                   edate=atof(begin);
                 }
-            } 
-          else 
+            }
+          else
             {
               range = 1;
               if ((rest=strchr(inbuff, ',')))   /* If it contains a comma */
@@ -636,15 +636,15 @@ int main(int argc, char**argv)
                       rest++;
                       ismonth=atoi(begin);
                       isday=atoi(rest);
-                    } 
-                  else 
+                    }
+                  else
                     {
                       ismonth=0;
                       isday=0;
                     }
                   sdate = julday(ismonth,isday,isyear);
-                } 
-              else 
+                }
+              else
                 {
                   decyears=1;                    /* Else it's decimal years */
                   sdate=atof(args[2]);
@@ -655,8 +655,8 @@ int main(int argc, char**argv)
               decyears=-1;
               range=-1;
             }
-      
-        case 2 : 
+
+        case 2 :
           if (need_to_read_model)
             {
               strncpy(mdfile,args[1],MAXREAD);
@@ -665,7 +665,7 @@ int main(int argc, char**argv)
           break;
         }
       
-      if (range == 2 && coords_from_file) 
+      if (range == 2 && coords_from_file)
         {
           printf("Error in line %1d, date = %s: date ranges not allowed for file option\n\n",iline,args[2]);
           exit(2);
@@ -679,7 +679,7 @@ int main(int argc, char**argv)
       warn_H_strong_val = 99999.0;
       warn_P = 0;
       
-      if (need_to_read_model) 
+      if (need_to_read_model)
         {
           while (stream == NULL)
             {
@@ -732,16 +732,16 @@ int main(int argc, char**argv)
                     {
                       minyr=yrmin[0];
                       maxyr=yrmax[0];
-                    } 
-                  else 
+                    }
+                  else
                     {
                       if (yrmin[modelI]<minyr)
                         {
                           minyr=yrmin[modelI];
                         }
                       if (yrmax[modelI]>maxyr){
-                        maxyr=yrmax[modelI];
-                      }
+                          maxyr=yrmax[modelI];
+                        }
                     } /* if modelI != 0 */
                   
                 } /* If 1st 3 chars are spaces */
@@ -767,7 +767,7 @@ int main(int argc, char**argv)
       /* Get date */
       
       if (coords_from_file && !arg_err && (decyears != 1 && decyears != 2))
-        {printf("\nError: unrecognized date %s in coordinate file line %1d\n\n",args[2],iline); arg_err = 1;} 
+        {printf("\nError: unrecognized date %s in coordinate file line %1d\n\n",args[2],iline); arg_err = 1;}
 
       while ((decyears!=1)&&(decyears!=2))
         {
@@ -780,7 +780,7 @@ int main(int argc, char**argv)
         }
 
       if (coords_from_file && !arg_err && range != 1)
-        {printf("\nError: unrecognized date %s in coordinate file line %1d\n\n",args[2],iline); arg_err = 1;} 
+        {printf("\nError: unrecognized date %s in coordinate file line %1d\n\n",args[2],iline); arg_err = 1;}
       
       while ((range!=1)&&(range!=2))
         {
@@ -796,7 +796,7 @@ int main(int argc, char**argv)
       if (range == 1)
         {
           if (coords_from_file && !arg_err && (sdate < minyr || sdate > maxyr+1))
-            {printf("\nError: unrecognized date %s in coordinate file line %1d\n\n",args[2],iline); arg_err = 1;} 
+            {printf("\nError: unrecognized date %s in coordinate file line %1d\n\n",args[2],iline); arg_err = 1;}
 
           while ((sdate<minyr)||(sdate>maxyr+1))
             {
@@ -805,9 +805,9 @@ int main(int argc, char**argv)
                   printf("\nEnter the decimal date (%4.2f to %4.0f): ",minyr, maxyr);
                   safegets(inbuff, MAXREAD);
                   sdate=atof(inbuff);
-                } 
-              else 
-                {            
+                }
+              else
+                {
                   while ((isyear>(int)maxyr+1)||(isyear<(int)minyr))
                     {
                       printf("\nEnter the date (%4.2f to %4.2f)\n ", minyr, maxyr);
@@ -831,7 +831,7 @@ int main(int argc, char**argv)
                     }
                   
                   sdate = julday(ismonth,isday,isyear);
-                }                  
+                }
               if ((sdate<minyr)||(sdate>=maxyr+1))
                 {
                   ismonth=isday=isyear=0;
@@ -847,8 +847,8 @@ int main(int argc, char**argv)
               
             } /* if single date */
         } /* (range == 1) */
-      else 
-        {    
+      else
+        {
           while ((sdate<minyr)||(sdate>maxyr))
             {
               if (decyears==1)
@@ -856,8 +856,8 @@ int main(int argc, char**argv)
                   printf("\nEnter the decimal start date (%4.2f to %4.0f): ",minyr, maxyr);
                   safegets(inbuff, MAXREAD);
                   sdate=atof(inbuff);
-                } 
-              else 
+                }
+              else
                 {
                   while ((isyear>(int)maxyr)||(isyear<(int)minyr))
                     {
@@ -866,13 +866,13 @@ int main(int argc, char**argv)
                       printf("\n   Year (%d to %d): ",(int)minyr,(int)(maxyr));
                       safegets(inbuff, MAXREAD);
                       isyear=atoi(inbuff);
-                    }            
+                    }
                   while ((ismonth>12)||(ismonth<1))
                     {
                       printf("\n   Month (1-12): ");
                       safegets(inbuff, MAXREAD);
                       ismonth=atoi(inbuff);
-                    }            
+                    }
                   while ((isday>31)||(isday<1))
                     {
                       printf("\n   Day (1-31): ");
@@ -890,14 +890,14 @@ int main(int argc, char**argv)
             } /* WHILE ((sdate<minyr)||(sdate>maxyr)) */
           
           while ((edate<=sdate)||(edate>maxyr+1))
-            {          
+            {
               if (decyears==1)
                 {
                   printf("\nEnter the decimal end date (%4.2f to %4.0f): ",sdate, maxyr);
                   safegets(inbuff, MAXREAD);
                   edate=atof(inbuff);
-                } 
-              else 
+                }
+              else
                 {
                   while ((ieyear>(int)maxyr)||(ieyear<(int)sdate))
                     {
@@ -938,7 +938,7 @@ int main(int argc, char**argv)
                   printf("         An updated model file is available before 1.1.%4.0f\n",maxyr);
                 }
             } /* while ((edate<=sdate)||(edate>maxyr+1)) */
-        
+
           while ((step<=0)||(step>(edate-sdate)))
             {
               printf("\nEnter the step size in years. (0 to %4.2f): ",edate-sdate);
@@ -961,7 +961,7 @@ int main(int argc, char**argv)
       /* Get Coordinate prefs */
 
       if (coords_from_file && !arg_err && (igdgc != 1 && igdgc != 2))
-          {printf("\nError: unrecognized coordinate system %s in coordinate file line %1d\n\n",args[3],iline); arg_err = 1;} 
+        {printf("\nError: unrecognized coordinate system %s in coordinate file line %1d\n\n",args[3],iline); arg_err = 1;}
 
       while ((igdgc!=1)&&(igdgc!=2))
         {
@@ -984,7 +984,7 @@ int main(int argc, char**argv)
       if (igdgc==1)
         {
           if (coords_from_file && !arg_err && (units > 3 || units < 1))
-            {printf("\nError: unrecognized altitude units %s in coordinate file line %1d\n\n",args[4],iline); arg_err = 1;} 
+            {printf("\nError: unrecognized altitude units %s in coordinate file line %1d\n\n",args[4],iline); arg_err = 1;}
 
           while ((units>3)||(units<1))
             {
@@ -1004,7 +1004,7 @@ int main(int argc, char**argv)
         {
           minalt*=1000.0;
           maxalt*=1000.0;
-        } 
+        }
       else if (units==3)
         {
           minalt*=FT2KM;
@@ -1014,7 +1014,7 @@ int main(int argc, char**argv)
       /* Get altitude */
 
       if (coords_from_file && !arg_err && (alt < minalt || alt > maxalt))
-        {printf("\nError: unrecognized altitude %s in coordinate file line %1d\n\n",args[4],iline); arg_err = 1;} 
+        {printf("\nError: unrecognized altitude %s in coordinate file line %1d\n\n",args[4],iline); arg_err = 1;}
 
       while ((alt<minalt)||(alt>maxalt))
         {
@@ -1030,7 +1030,7 @@ int main(int argc, char**argv)
       if (units==2)
         {
           alt *= 0.001;
-        } 
+        }
       else if (units==3)
         {
           alt /= FT2KM;
@@ -1057,7 +1057,7 @@ int main(int argc, char**argv)
       if (decdeg==1)
         {
           if (coords_from_file && !arg_err && (latitude < -90 || latitude > 90))
-            {printf("\nError: unrecognized latitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;} 
+            {printf("\nError: unrecognized latitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;}
 
           while ((latitude<-90)||(latitude>90))
             {
@@ -1067,7 +1067,7 @@ int main(int argc, char**argv)
             }
 
           if (coords_from_file && !arg_err && (longitude < -180 || longitude > 180))
-            {printf("\nError: unrecognized longitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;} 
+            {printf("\nError: unrecognized longitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;}
 
           while ((longitude<-180)||(longitude>180))
             {
@@ -1076,13 +1076,13 @@ int main(int argc, char**argv)
               longitude=atof(inbuff);
             }
         } /* if (decdeg==1) */
-      else 
+      else
         {
           latitude=degrees_to_decimal(ilat_deg,ilat_min,ilat_sec);
           longitude=degrees_to_decimal(ilon_deg,ilon_min,ilon_sec);
 
           if (coords_from_file && !arg_err && (latitude < -90 || latitude > 90))
-            {printf("\nError: unrecognized latitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;} 
+            {printf("\nError: unrecognized latitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;}
 
           while ((latitude<-90)||(latitude>90))
             {
@@ -1116,7 +1116,7 @@ int main(int argc, char**argv)
             } /* while ((latitude<-90)||(latitude>90)) */
           
           if (coords_from_file && !arg_err && (longitude < -180 || longitude > 180))
-            {printf("\nError: unrecognized longitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;} 
+            {printf("\nError: unrecognized longitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;}
 
           while ((longitude<-180)||(longitude>180))
             {
@@ -1149,11 +1149,11 @@ int main(int argc, char**argv)
                 }
             } /* while ((longitude<-180)||(longitude>180)) */
         } /* if (decdeg != 1) */
-                  
+
       /** This will compute everything needed for 1 point in time. **/
       
       
-      if (max2[modelI] == 0) 
+      if (max2[modelI] == 0)
         {
           getshc(mdfile, 1, irec_pos[modelI], max1[modelI], 1);
           getshc(mdfile, 1, irec_pos[modelI+1], max1[modelI+1], 2);
@@ -1161,8 +1161,8 @@ int main(int argc, char**argv)
                           yrmin[modelI+1], max1[modelI+1], 3);
           nmax = interpsh(sdate+1, yrmin[modelI] , max1[modelI],
                           yrmin[modelI+1], max1[modelI+1],4);
-        } 
-      else 
+        }
+      else
         {
           getshc(mdfile, 1, irec_pos[modelI], max1[modelI], 1);
           getshc(mdfile, 0, irec_pos[modelI], max2[modelI], 2);
@@ -1200,13 +1200,13 @@ int main(int argc, char**argv)
           /* while rest is ok */
         }
       
-      if (h < 1000.0) 
+      if (h < 1000.0)
         {
           warn_H = 0;
           warn_H_strong = 1;
           if (h<warn_H_strong_val) warn_H_strong_val = h;
         }
-      else if (h < 5000.0 && !warn_H_strong) 
+      else if (h < 5000.0 && !warn_H_strong)
         {
           warn_H = 1;
           if (h<warn_H_val) warn_H_val = h;
@@ -1234,16 +1234,16 @@ int main(int argc, char**argv)
       if (coords_from_file)
         {
           print_result_file(outfile, d, i, h, x, y, z, f,ddot,idot,hdot,xdot,ydot,zdot,fdot);
-        }  
+        }
       else
-        {    
+        {
           printf("\n\n\n  Model: %s \n", model[modelI]);
           if (decdeg==1)
             {
               printf("  Latitude: %4.2f deg\n", latitude);
               printf("  Longitude: %4.2f deg\n", longitude);
-            } 
-          else 
+            }
+          else
             {
               printf("  Latitude: %d deg, %d min, %d sec\n",
                      ilat_deg,ilat_min, ilat_sec);
@@ -1255,7 +1255,7 @@ int main(int argc, char**argv)
             printf("%.2f km\n", alt);
           else if (units==2)
             printf("%.2f meters\n", alt*1000.0);
-          else 
+          else
             printf("%.2f ft\n", (alt*FT2KM));
           
           if (range==1)
@@ -1263,7 +1263,7 @@ int main(int argc, char**argv)
               printf("  Date of Interest: ");
               if (decyears==1)
                 printf(" %4.2f\n\n", sdate);
-              else 
+              else
                 printf("%d-%d-%d (yyyy-mm-dd)\n\n",  isyear, ismonth, isday);
               
               print_header();
@@ -1274,7 +1274,7 @@ int main(int argc, char**argv)
               print_dashed_line();
               
             } /* if range == 1 */
-          else 
+          else
             {
               printf("  Range of Interest: ");
               if (decyears==1)
@@ -1298,10 +1298,10 @@ int main(int argc, char**argv)
                   for (counter=0;counter<step;counter++)
                     {
                       if (max2[modelI] == 0){       /*If not last element in array */
-                        if (syr>yrmin[modelI+1]){  /* And past model boundary */
-                          modelI++;              /* Get next model */
+                          if (syr>yrmin[modelI+1]){  /* And past model boundary */
+                              modelI++;              /* Get next model */
+                            }
                         }
-                      }
                     } /* for counter */
                   
                   if (max2[modelI] == 0)       /*If still not last element */
@@ -1312,8 +1312,8 @@ int main(int argc, char**argv)
                                       yrmin[modelI+1], max1[modelI+1], 3);
                       nmax = interpsh(syr+1, yrmin[modelI] , max1[modelI],
                                       yrmin[modelI+1], max1[modelI+1],4);
-                    } 
-                  else 
+                    }
+                  else
                     {
                       getshc(mdfile, 1, irec_pos[modelI], max1[modelI], 1);
                       getshc(mdfile, 0, irec_pos[modelI], max2[modelI], 2);
@@ -1365,19 +1365,19 @@ int main(int argc, char**argv)
                   
                   print_result(syr, d, i, h, x, y, z, f);
                 } /* for syr */
-          
+
               print_long_dashed_line();
               print_header_sv();
               print_result_sv(edate,ddot,idot,hdot,xdot,ydot,zdot,fdot);
               print_dashed_line();
             } /* if range > 1 */
-        
+
           if (warn_H)
             {
               printf("\nWarning: The horizontal field strength at this location is only %6.1f nT\n",warn_H_val);
               printf("         Compass readings have large uncertainties in areas where H is\n");
               printf("         smaller than 5000 nT\n\n");
-            } 
+            }
           if (warn_H_strong)
             {
               printf("\nWarning: The horizontal field strength at this location is only %6.1f nT\n",warn_H_strong_val);
@@ -1387,7 +1387,7 @@ int main(int argc, char**argv)
           if (warn_P)
             {
               printf("\nWarning: Location is at geographic pole where X, Y, and declination are not computed\n\n");
-            } 
+            }
         } /* if not coords_from_file */
 
       if (coords_from_file)
@@ -1397,18 +1397,18 @@ int main(int argc, char**argv)
           if (argc==7) again = 0; /* run command line only once */
           else
             do
-              {
-                printf("\n  Enter");
-                printf("\n     0) to quit.");
-                printf("\n     1) to select a new model input file.");
-                printf("\n     2) to compute for a new point using same data file.");
-                printf("\n\n   ==> ");
-                safegets(inbuff, MAXREAD);
-                again=atoi(inbuff);
-                if (again == 1) { need_to_read_model = 1; stream = NULL;}
-                if (again == 2) { need_to_read_model = 0; again = 1;}
-              }
-            while (again != 0 && again != 1);
+            {
+              printf("\n  Enter");
+              printf("\n     0) to quit.");
+              printf("\n     1) to select a new model input file.");
+              printf("\n     2) to compute for a new point using same data file.");
+              printf("\n\n   ==> ");
+              safegets(inbuff, MAXREAD);
+              again=atoi(inbuff);
+              if (again == 1) { need_to_read_model = 1; stream = NULL;}
+              if (again == 2) { need_to_read_model = 0; again = 1;}
+            }
+          while (again != 0 && again != 1);
         } /* if not coords_from_file */
 
       if (again == 1)
@@ -1423,7 +1423,7 @@ int main(int argc, char**argv)
         }
     } /* while (again == 1) */
 
- reached_EOF:
+reached_EOF:
   if (coords_from_file) printf("\n Processed %1d lines\n\n",iline);
 
   if (coords_from_file && !feof(coordfile) && arg_err) printf("Terminated prematurely due to argument error in coordinate file\n\n");
@@ -1437,19 +1437,19 @@ int main(int argc, char**argv)
           if (decyears==1)
             {
               printf("%4.2f ", sdate);
-            } 
-          else 
+            }
+          else
             {
               printf("%d,%d,%d ", isyear,ismonth,isday);
             }
-        } 
-      else 
+        }
+      else
         {
           if (decyears==1)
             {
               printf("%4.2f-%4.2f-%4.2f ", sdate,edate,step);
-            } 
-          else 
+            }
+          else
             {
               printf("%d,%d,%d-%d,%d,%d-%4.2f ", isyear,ismonth,isday,ieyear,iemonth,ieday,step);
             }
@@ -1457,28 +1457,28 @@ int main(int argc, char**argv)
       if (igdgc==1)
         {
           printf("D ");
-        } 
-      else 
+        }
+      else
         {
           printf("C ");
         }
       if (units==1)
         {
           printf("K%.2f ", alt);
-        } 
+        }
       else if (units==2)
         {
           printf("M%.2f ", alt*1000.0);
-        } 
-      else 
+        }
+      else
         {
           printf("F%.2f ", (alt*FT2KM));
         }
       if (decdeg==1)
         {
           printf("%3.2f %4.2f\n\n", latitude, longitude);
-        } 
-      else 
+        }
+      else
         {
           printf("%d,%d,%d %d,%d,%d\n\n", ilat_deg, ilat_min, ilat_sec,
                  ilon_deg, ilon_min, ilon_sec);
@@ -1499,7 +1499,7 @@ void print_long_dashed_line(void)
   printf(" - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
   return;
 }
-      
+
 void print_header(void)
 { 
   print_dashed_line();
@@ -1513,8 +1513,8 @@ void print_result(double date, double d, double i, double h, double x, double y,
   int   ddeg,ideg;
   double dmin,imin;
 
-      /* Change d and i to deg and min */
-      
+  /* Change d and i to deg and min */
+
   ddeg=(int)d;
   dmin=(d-(double)ddeg)*60;
   if (d > 0 && dmin >= 59.5)
@@ -1551,7 +1551,7 @@ void print_result(double date, double d, double i, double h, double x, double y,
       else
         printf("  %4.2f       NaN    %4dd %3.0fm  %8.1f %8.1f %8.1f %8.1f %8.1f\n",date,ideg,imin,h,x,y,z,f);
     }
-  else 
+  else
     printf("  %4.2f  %4dd %3.0fm  %4dd %3.0fm  %8.1f %8.1f %8.1f %8.1f %8.1f\n",date,ddeg,dmin,ideg,imin,h,x,y,z,f);
   return;
 } /* print_result */
@@ -1571,7 +1571,7 @@ void print_result_sv(double date, double ddot, double idot, double hdot, double 
       else
         printf("  %4.2f        NaN   %7.1f     %8.1f %8.1f %8.1f %8.1f %8.1f\n",date,idot,hdot,xdot,ydot,zdot,fdot);
     }
-  else 
+  else
     printf("  %4.2f   %7.1f    %7.1f     %8.1f %8.1f %8.1f %8.1f %8.1f\n",date,ddot,idot,hdot,xdot,ydot,zdot,fdot);
   return;
 } /* print_result_sv */
@@ -1583,7 +1583,7 @@ void print_result_file(FILE *outf, double d, double i, double h, double x, doubl
   double dmin,imin;
   
   /* Change d and i to deg and min */
-      
+
   ddeg=(int)d;
   dmin=(d-(double)ddeg)*60;
   if (ddeg!=0) dmin=fabs(dmin);
@@ -1598,7 +1598,7 @@ void print_result_file(FILE *outf, double d, double i, double h, double x, doubl
       else
         fprintf(outf," NaN        %4dd %2.0fm  %8.1f %8.1f %8.1f %8.1f %8.1f",ideg,imin,h,x,y,z,f);
     }
-  else 
+  else
     fprintf(outf," %4dd %2.0fm  %4dd %2.0fm  %8.1f %8.1f %8.1f %8.1f %8.1f",ddeg,dmin,ideg,imin,h,x,y,z,f);
 
   if (my_isnan(ddot))
@@ -1608,7 +1608,7 @@ void print_result_file(FILE *outf, double d, double i, double h, double x, doubl
       else
         fprintf(outf,"      NaN  %7.1f     %8.1f %8.1f %8.1f %8.1f %8.1f\n",idot,hdot,xdot,ydot,zdot,fdot);
     }
-  else 
+  else
     fprintf(outf," %7.1f   %7.1f     %8.1f %8.1f %8.1f %8.1f %8.1f\n",ddot,idot,hdot,xdot,ydot,zdot,fdot);
   return;
 } /* print_result_file */
@@ -1642,9 +1642,9 @@ int safegets(char *buffer,int n){
   buffer[n+1]='\0';             /** Set last char to null **/
   ptr=strchr(buffer,'\n');      /** If string contains '\n' **/
   if (ptr!=NULL){                /** If string contains '\n' **/
-    ptr[0]='\0';               /** Change char to '\0' **/
-    if (buffer[0] == '\0') printf("\n ... no entry ...\n");
-  }
+      ptr[0]='\0';               /** Change char to '\0' **/
+      if (buffer[0] == '\0') printf("\n ... no entry ...\n");
+    }
   
   return strlen(buffer);        /** Return the length **/
 }
@@ -1687,16 +1687,16 @@ double degrees_to_decimal(int degrees,int minutes,int seconds)
   decimal = fabs(sec) + fabs(min) + fabs(deg);
   
   if (deg < 0) {
-    decimal = -decimal;
-  } else if (deg == 0){
-    if (min < 0){
       decimal = -decimal;
-    } else if (min == 0){
-      if (sec<0){
-        decimal = -decimal;
-      }
+    } else if (deg == 0){
+      if (min < 0){
+          decimal = -decimal;
+        } else if (min == 0){
+          if (sec<0){
+              decimal = -decimal;
+            }
+        }
     }
-  }
   
   return(decimal);
 }
@@ -1720,10 +1720,7 @@ double degrees_to_decimal(int degrees,int minutes,int seconds)
 /*                                                                          */
 /****************************************************************************/
 
-double julday(month, day, year)
-     int month;
-     int day;
-     int year;
+double julday(int month, int day, int year)
 {
   int days[12] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
 
@@ -1768,12 +1765,8 @@ double julday(month, day, year)
 /****************************************************************************/
 
 
-int getshc(file, iflag, strec, nmax_of_gh, gh)
-char file[PATH];
-int iflag;
-long int  strec;
-int       nmax_of_gh;
-int       gh;
+int getshc(char file[PATH], int iflag, long strec, int nmax_of_gh, int gh)
+//char file[PATH];
 {
   char  inbuff[MAXINBUFF];
   char irat[9];
@@ -1882,12 +1875,7 @@ int       gh;
 /****************************************************************************/
 
 
-int extrapsh(date, dte1, nmax1, nmax2, gh)
-double date;
-double dte1;
-int   nmax1;
-int   nmax2;
-int   gh;
+int extrapsh(double date, double dte1, int nmax1, int nmax2, int gh)
 {
   int   nmax;
   int   k, l;
@@ -1999,13 +1987,7 @@ int   gh;
 /****************************************************************************/
 
 
-int interpsh(date, dte1, nmax1, dte2, nmax2, gh)
-     double date;
-     double dte1;
-     int   nmax1;
-     double dte2;
-     int   nmax2;
-     int   gh;
+int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2, int gh)
 {
   int   nmax;
   int   k, l;
@@ -2130,17 +2112,8 @@ int interpsh(date, dte1, nmax1, dte2, nmax2, gh)
 /****************************************************************************/
 
 
-int shval3(igdgc, flat, flon, elev, nmax, gh, iext, ext1, ext2, ext3)
-     int   igdgc;
-     double flat;
-     double flon;
-     double elev;
-     int   nmax;
-     int   gh;
-     int   iext;
-     double ext1;
-     double ext2;
-     double ext3;
+int shval3(int igdgc, double flat, double flon, double elev, int nmax,
+           int gh, int iext, double ext1, double ext2, double ext3)
 {
   double earths_radius = 6371.2;
   double dtr = 0.01745329;
@@ -2307,7 +2280,7 @@ int shval3(igdgc, flat, flon, elev, nmax, gh, iext, ext1, ext2, ext3)
               if (clat > 0)
                 {
                   y = y + (aa * sl[m] - bb * cl[m]) *
-                    fm * p[k]/((fn + 1.0) * clat);
+                      fm * p[k]/((fn + 1.0) * clat);
                 }
               else
                 {
@@ -2322,12 +2295,12 @@ int shval3(igdgc, flat, flon, elev, nmax, gh, iext, ext1, ext2, ext3)
               if (clat > 0)
                 {
                   ytemp = ytemp + (aa * sl[m] - bb * cl[m]) *
-                    fm * p[k]/((fn + 1.0) * clat);
+                      fm * p[k]/((fn + 1.0) * clat);
                 }
               else
                 {
                   ytemp = ytemp + (aa * sl[m] - bb * cl[m]) *
-                    q[k] * slat;
+                      q[k] * slat;
                 }
               l = l + 2;
               break;
@@ -2357,15 +2330,15 @@ int shval3(igdgc, flat, flon, elev, nmax, gh, iext, ext1, ext2, ext3)
   switch(gh)
     {
     case 3:   aa = x;
-		x = x * cd + z * sd;
-		z = z * cd - aa * sd;
-		break;
+      x = x * cd + z * sd;
+      z = z * cd - aa * sd;
+      break;
     case 4:   aa = xtemp;
-		xtemp = xtemp * cd + ztemp * sd;
-		ztemp = ztemp * cd - aa * sd;
-		break;
+      xtemp = xtemp * cd + ztemp * sd;
+      ztemp = ztemp * cd - aa * sd;
+      break;
     default:  printf("\nError in subroutine shval3");
-		break;
+      break;
     }
   return(ios);
 }
@@ -2401,8 +2374,7 @@ int shval3(igdgc, flat, flon, elev, nmax, gh, iext, ext1, ext2, ext3)
 /*                                                                          */
 /****************************************************************************/
 
-int dihf (gh)
-     int gh;
+int dihf (int gh)
 {
   int ios;
   int j;
@@ -2453,7 +2425,7 @@ int dihf (gh)
                 }
             }
         }
-		break;
+      break;
     case 4:   for (j = 1; j <= 1; ++j)
         {
           h2 = xtemp*xtemp + ytemp*ytemp;
@@ -2491,9 +2463,9 @@ int dihf (gh)
                 }
             }
         }
-		break;
+      break;
     default:  printf("\nError in subroutine dihf");
-		break;
+      break;
     }
   return(ios);
 }
