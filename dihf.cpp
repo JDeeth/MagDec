@@ -1,3 +1,6 @@
+#include "magdec.h"
+#include <iostream>
+
 /****************************************************************************/
 /*                                                                          */
 /*                           Subroutine dihf                                */
@@ -28,98 +31,126 @@
 /*                                                                          */
 /****************************************************************************/
 
-int dihf (int gh)
+struct pointComponents {
+  double x, y, z; //north, east, and downward component of magnetic field at
+  //a [geocentric/geodetic?] point. Units are nT.
+};
+
+struct pointField {
+  double d; //declination from geographic north (deg)
+  double i; //inclination (deg)
+  double h; //horizontal field strength
+  double f; //total field strength
+};
+
+pointField dihf (const pointComponents &xyz)
 {
-  int ios;
   int j;
-  double sn;
+  double sn; //small number
   double h2;
   double hpx;
-  double argument, argument2;
-  
-  ios = gh;
+
+  double x = xyz.x;
+  double y = xyz.y;
+  double z = xyz.z;
+
+  double d, i, h, f;
+
   sn = 0.0001;
   
-  switch(gh)
+  h2 = x*x + y*y;
+  h = sqrt(h2);       /* calculate horizontal intensity */
+  f = sqrt(h2 + z*z);      /* calculate total intensity */
+  if (f < sn)
     {
-    case 3:   for (j = 1; j <= 1; ++j)
-        {
-          h2 = x*x + y*y;
-          argument = h2;
-          h = sqrt(argument);       /* calculate horizontal intensity */
-          argument = h2 + z*z;
-          f = sqrt(argument);      /* calculate total intensity */
-          if (f < sn)
-            {
-              d = NaN;        /* If d and i cannot be determined, */
-              i = NaN;        /*       set equal to NaN         */
-            }
-          else
-            {
-              argument = z;
-              argument2 = h;
-              i = atan2(argument,argument2);
-              if (h < sn)
-                {
-                  d = NaN;
-                }
-              else
-                {
-                  hpx = h + x;
-                  if (hpx < sn)
-                    {
-                      d = PI;
-                    }
-                  else
-                    {
-                      argument = y;
-                      argument2 = hpx;
-                      d = 2.0 * atan2(argument,argument2);
-                    }
-                }
-            }
-        }
-      break;
-    case 4:   for (j = 1; j <= 1; ++j)
-        {
-          h2 = xtemp*xtemp + ytemp*ytemp;
-          argument = h2;
-          htemp = sqrt(argument);
-          argument = h2 + ztemp*ztemp;
-          ftemp = sqrt(argument);
-          if (ftemp < sn)
-            {
-              dtemp = NaN;    /* If d and i cannot be determined, */
-              itemp = NaN;    /*       set equal to 999.0         */
-            }
-          else
-            {
-              argument = ztemp;
-              argument2 = htemp;
-              itemp = atan2(argument,argument2);
-              if (htemp < sn)
-                {
-                  dtemp = NaN;
-                }
-              else
-                {
-                  hpx = htemp + xtemp;
-                  if (hpx < sn)
-                    {
-                      dtemp = PI;
-                    }
-                  else
-                    {
-                      argument = ytemp;
-                      argument2 = hpx;
-                      dtemp = 2.0 * atan2(argument,argument2);
-                    }
-                }
-            }
-        }
-      break;
-    default:  printf("\nError in subroutine dihf");
-      break;
+      d = NaN;        /* If d and i cannot be determined, */
+      i = NaN;        /*       set equal to NaN         */
     }
-  return(ios);
+  else
+    {
+      i = atan2(z, h);
+      if (h < sn)
+        {
+          d = NaN;
+        }
+      else
+        {
+          hpx = h + x;
+          if (hpx < sn) //
+            {
+              d = PI;
+            }
+          else
+            {
+              d = 2.0 * atan2(y, hpx);
+            }
+        }
+    }
+
+  pointField dihf;
+  dihf.d = d;
+  dihf.i = i;
+  dihf.h = h;
+  dihf.f = f;
+  return(dihf);
+}
+
+//dummy main
+using namespace std;
+int main () {
+  pointComponents input;
+  input.x = 27547.2;
+  input.y = -2817.5;
+  input.z = -15628.3;
+  cout <<   "Input x, y, z:" << endl <<
+            input.x << " " <<
+            input.y << " " <<
+            input.z << endl;
+
+  pointField output = dihf(input);
+
+  //copypasta
+  int   ddeg,ideg;
+  double dmin,imin;
+  double d, i;
+  d = output.d;
+  i = output.i;
+
+  /* Change d and i to deg and min */
+  ddeg=(int)d;
+  dmin=(d-(double)ddeg)*60;
+  if (d > 0 && dmin >= 59.5)
+    {
+      dmin -= 60.0;
+      ddeg++;
+    }
+  if (d < 0 && dmin <= -59.5)
+    {
+      dmin += 60.0;
+      ddeg--;
+    }
+
+  if (ddeg!=0) dmin=fabs(dmin);
+  ideg=(int)i;
+  imin=(i-(double)ideg)*60;
+  if (i > 0 && imin >= 59.5)
+    {
+      imin -= 60.0;
+      ideg++;
+    }
+  if (i < 0 && imin <= -59.5)
+    {
+      imin += 60.0;
+      ideg--;
+    }
+  if (ideg!=0) imin=fabs(imin);
+
+  //copypasta end
+
+  cout << "Output d, i, h, f:" << endl <<
+          ddeg << "\'" << dmin << " " <<
+          ideg << "\'" << imin << " " <<
+          output.h << " " << output.f << endl;
+
+  return 0;
 }

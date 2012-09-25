@@ -104,34 +104,19 @@
 /****************************************************************************/
 
 #include <stdio.h>
-#include <stdlib.h>            
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h> 
 
-int my_isnan(double d)
-{
-  return (d != d);              /* IEEE: only NaN is not equal to itself */
-}
+#include "magdec.h"
 
-#define NaN log(-1.0)
-//#define FT2KM (1.0/0.0003048)
-//#define PI 3.141592654
-//#define RAD2DEG (180.0/PI)
-const double FT2KM = 1.0/0.0003048;
-const double PI = 3.141592654;
-const double RAD2DEG = (180.0/PI);
-
-#ifndef SEEK_SET
+#ifndef SEEK_SET //for file loading purposes
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
 #endif
 
-/*#define IEXT 0
-#define FALSE 0
-#define TRUE 1
-#define RECL 81*/
 const int IEXT = 0;
 const int FALSE = 0;
 const int TRUE = 1;
@@ -2374,6 +2359,8 @@ int shval3(int igdgc, double flat, double flon, double elev, int nmax,
 /*                                                                          */
 /****************************************************************************/
 
+//note: should be member function of point-declination class
+
 int dihf (int gh)
 {
   int ios;
@@ -2392,13 +2379,13 @@ int dihf (int gh)
         {
           h2 = x*x + y*y;
           argument = h2;
-          h = sqrt(argument);       /* calculate horizontal intensity */
+          h = sqrt(argument);       //* calculate horizontal intensity *
           argument = h2 + z*z;
-          f = sqrt(argument);      /* calculate total intensity */
+          f = sqrt(argument);      //* calculate total intensity *
           if (f < sn)
             {
-              d = NaN;        /* If d and i cannot be determined, */
-              i = NaN;        /*       set equal to NaN         */
+              d = NaN;        //* If d and i cannot be determined, *
+              i = NaN;        //*       set equal to NaN         *
             }
           else
             {
@@ -2435,8 +2422,8 @@ int dihf (int gh)
           ftemp = sqrt(argument);
           if (ftemp < sn)
             {
-              dtemp = NaN;    /* If d and i cannot be determined, */
-              itemp = NaN;    /*       set equal to 999.0         */
+              dtemp = NaN;    //* If d and i cannot be determined, *
+              itemp = NaN;    //*       set equal to 999.0         *
             }
           else
             {
