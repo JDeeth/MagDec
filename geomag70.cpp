@@ -139,16 +139,6 @@ const int MAXMOD = 30;
 const int PATH = MAXREAD;
 /** Max path and filename length **/
 
-//#define EXT_COEFF1 (double)0
-//#define EXT_COEFF2 (double)0
-//#define EXT_COEFF3 (double)0
-const double EXT_COEFF1 = 0, EXT_COEFF2 = 0, EXT_COEFF3 = 0;
-
-//#define MAXDEG 13
-const int MAXDEG = 13;
-//#define MAXCOEFF (MAXDEG*(MAXDEG+2)+1) /* index starts with 1!, (from old Fortran?) */
-const int MAXCOEFF = (MAXDEG*(MAXDEG+2)+1);
-
 double gh1[MAXCOEFF];
 double gh2[MAXCOEFF];
 double gha[MAXCOEFF];              /* Geomag global variables */
@@ -366,8 +356,8 @@ int main(int argc, char**argv)
   double julday(int month, int day, int year);
   int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2, int gh);
   int extrapsh(double date, double dte1, int nmax1, int nmax2, int gh);
-  int shval3(int igdgc, double flat, double flon, double elev, int nmax,
-             int gh, int iext, double ext1, double ext2, double ext3);
+  //int shval3(int igdgc, double flat, double flon, double elev, int nmax,
+  //           int gh, int iext, double ext1, double ext2, double ext3);
   //int dihf (int gh);
   int   safegets(char *buffer,int n);
   int getshc(char file[PATH], int iflag, long strec, int nmax_of_gh, int gh);
@@ -1158,32 +1148,29 @@ int main(int argc, char**argv)
       
       
       /* Do the first calculations */
-      shval3(igdgc, latitude, longitude, alt, nmax, 3,
-             IEXT, EXT_COEFF1, EXT_COEFF2, EXT_COEFF3);
-      //Modularised dihf, no more globals
-      //dihf(3);
-      pointComponents xyz;
-      xyz.x = x;
-      xyz.y = y;
-      xyz.z = z;
+      pointComponents xyz = shval3(
+            latitude, longitude, alt, nmax,
+            &gha[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
+      x = xyz.x; //for where x,y,z, are used elsewhere
+      y = xyz.y;
+      z = xyz.z;
       pointField a = dihf(xyz);
       d = a.d;
       i = a.i;
       h = a.h;
       f = a.f;
-      //
-      shval3(igdgc, latitude, longitude, alt, nmax, 4,
-             IEXT, EXT_COEFF1, EXT_COEFF2, EXT_COEFF3);
-      //dihf(4);
-      xyz.x = xtemp;
-      xyz.y = ytemp;
-      xyz.z = ztemp;
-      a = dihf(xyz);
+
+      pointComponents xyztemp = shval3(
+            latitude, longitude, alt, nmax,
+            &ghb[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
+      xtemp = xyztemp.x;
+      ytemp = xyztemp.y;
+      ztemp = xyztemp.z;
+      a = dihf(xyztemp);
       dtemp = a.d;
       itemp = a.i;
       htemp = a.h;
       ftemp = a.f;
-      //
       
       ddot = (dtemp - d);
       if (ddot > 180.0) ddot -= 360.0;
@@ -1326,31 +1313,29 @@ int main(int argc, char**argv)
                       nmax = extrapsh(syr+1, epoch[modelI], max1[modelI],
                                       max2[modelI], 4);
                     }
-                  shval3(igdgc, latitude, longitude, alt, nmax, 3,
-                         IEXT, EXT_COEFF1, EXT_COEFF2, EXT_COEFF3);
-                  //dihf(3);
-                  pointComponents xyz;
-                  xyz.x = x;
-                  xyz.y = y;
-                  xyz.z = z;
+                  pointComponents xyz = shval3(
+                        latitude, longitude, alt, nmax,
+                        &gha[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
+                  x = xyz.x; //for where x,y,z, are used elsewhere
+                  y = xyz.y;
+                  z = xyz.z;
                   pointField a = dihf(xyz);
                   d = a.d;
                   i = a.i;
                   h = a.h;
                   f = a.f;
-                  //
-                  shval3(igdgc, latitude, longitude, alt, nmax, 4,
-                         IEXT, EXT_COEFF1, EXT_COEFF2, EXT_COEFF3);
-                  //dihf(4);
-                  xyz.x = xtemp;
-                  xyz.y = ytemp;
-                  xyz.z = ztemp;
-                  a = dihf(xyz);
+
+                  pointComponents xyztemp = shval3(
+                        latitude, longitude, alt, nmax,
+                        &ghb[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
+                  xtemp = xyztemp.x;
+                  ytemp = xyztemp.y;
+                  ztemp = xyztemp.z;
+                  a = dihf(xyztemp);
                   dtemp = a.d;
                   itemp = a.i;
                   htemp = a.h;
                   ftemp = a.f;
-                  //
 
                   ddot = dtemp - d;
                   if (ddot > 180.0) ddot -= 360.0;
@@ -2085,10 +2070,6 @@ int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2, int gh
   return(nmax);
 }
 
-
-
-
-
 /****************************************************************************/
 /*                                                                          */
 /*                           Subroutine shval3                              */
@@ -2133,7 +2114,7 @@ int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2, int gh
 /*                                                                          */
 /****************************************************************************/
 
-
+/*
 int shval3(int igdgc, double flat, double flon, double elev, int nmax,
            int gh, int iext, double ext1, double ext2, double ext3)
 {
@@ -2159,21 +2140,21 @@ int shval3(int igdgc, double flat, double flon, double elev, int nmax,
   int ios;
   double argument;
   double power;
-  a2 = 40680631.59;            /* WGS84 */
-  b2 = 40408299.98;            /* WGS84 */
+  a2 = 40680631.59;            //* WGS84 *
+  b2 = 40408299.98;            //* WGS84 *
   ios = 0;
   r = elev;
   argument = flat * dtr;
   slat = sin( argument );
   if ((90.0 - flat) < 0.001)
     {
-      aa = 89.999;            /*  300 ft. from North pole  */
+      aa = 89.999;            //*  300 ft. from North pole  *
     }
   else
     {
       if ((90.0 + flat) < 0.001)
         {
-          aa = -89.999;        /*  300 ft. from South pole  */
+          aa = -89.999;        //*  300 ft. from South pole  *
         }
       else
         {
@@ -2364,7 +2345,7 @@ int shval3(int igdgc, double flat, double flon, double elev, int nmax,
     }
   return(ios);
 }
-
+*/
 
 /****************************************************************************/
 /*                                                                          */
