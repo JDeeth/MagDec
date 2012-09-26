@@ -109,10 +109,8 @@ double gh1[MAXCOEFF];
 double gh2[MAXCOEFF];
 double gha[MAXCOEFF];              /* Geomag global variables */
 double ghb[MAXCOEFF];
-double d=0,f=0,h=0,i=0;
-double dtemp,ftemp,htemp,itemp;
-double x=0,y=0,z=0;
-double xtemp,ytemp,ztemp;
+pointField gField, gFieldTemp;
+pointComponents gComp, gCompTemp;
 
 FILE *stream = NULL;                /* Pointer to specified model data file */
 
@@ -299,13 +297,8 @@ int main(int argc, char**argv)
   point.lat=200;
   point.lon=200;
   point.elev=-999999;
-  double ddot;
-  double fdot;
-  double hdot;
-  double idot;
-  double xdot;
-  double ydot;
-  double zdot;
+  pointField gFieldDot;
+  pointComponents gCompDot;
   double warn_H_val, warn_H_strong_val;
   
   /*  Subroutines used  */
@@ -313,30 +306,29 @@ int main(int argc, char**argv)
   void print_dashed_line();
   void print_long_dashed_line(void);
   void print_header();
-  void print_result(double date, double d, double i, double h, double x, double y, double z, double f);
+  void print_result(double date, pointField field, pointComponents comps);
   void print_header_sv();
-  void print_result_sv(double date, double ddot, double idot, double hdot, double xdot, double ydot, double zdot, double fdot);
-  void print_result_file(FILE *outf, double d, double i, double h, double x, double y, double z, double f,
-                         double ddot, double idot, double hdot, double xdot, double ydot, double zdot, double fdot);
+  void print_result_sv(double date, pointField field, pointComponents comps);
+  void print_result_file(FILE *outf, pointField field, pointComponents comps,
+                          pointField fieldDot, pointComponents compsDot);
   double degrees_to_decimal(int deg, int min, int sec);
   double julday(int month, int day, int year);
-  //int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2, int gh);
-  //int extrapsh(double date, double dte1, int nmax1, int nmax2, int gh);
   int   safegets(char *buffer,int n);
-  //int getshc(char file[PATH], int iflag, long strec, int nmax_of_gh, int gh);
 
   /* Initializations. */
   
   inbuff[MAXREAD+1]='\0';  /* Just to protect mem. */
   inbuff[MAXINBUFF-1]='\0';  /* Just to protect mem. */
-  
+
+  // printing out version number and header *
+  printf("\n\n Geomag v7.0 - Jan 25, 2010 ");
+
+  //Commenting out argc processing for clarification
+  /*
   for (iarg=0; iarg<argc; iarg++)
     if (argv[iarg] != NULL)
       strncpy(args[iarg],argv[iarg],MAXREAD);
-  
-  /* printing out version number and header */
-  printf("\n\n Geomag v7.0 - Jan 25, 2010 ");
-  
+
   if ((argc==2)&&((*(args[1])=='h')||(*(args[1])=='?')||(args[1][1]=='?')))
     {
       printf("\n\nUSAGE:\n");
@@ -373,8 +365,8 @@ int main(int argc, char**argv)
       printf("   change over the coming year, rather than instantaneous,\n");
       printf("   which can be different for declination near magnetic poles.\n");
       exit(2);
-    } /* help */
-  
+    } //* help *
+
   if ((argc==5)&&(*(args[2])=='f'))
     {
       printf("\n\n 'f' switch: converting file with multiple locations.\n");
@@ -389,7 +381,7 @@ int main(int argc, char**argv)
       strncpy(out_fname,args[4],MAXREAD);
       outfile=fopen(out_fname, "w");
       fprintf(outfile,"Date Coord-System Altitude Latitude Longitude D_deg D_min I_deg I_min H_nT X_nT Y_nT Z_nT F_nT dD_min dI_min dH_nT dX_nT dY_nT dZ_nT dF_nT\n");
-    } /* file option */
+    } //* file option *
 
   if (argc>=3 && argc !=5 && *(args[2])=='f')
     {
@@ -404,10 +396,12 @@ int main(int argc, char**argv)
       printf("command line:    geomag model_file date coord alt lat lon\n");
       printf("coordinate file: geomag model_file f input_file output_file\n");
       printf("or for help:     geomag h \n\n");
-    } /* missing arguments (not fatal) */
-  
+    } // missing arguments (not fatal) *
+
+  */
   while (again == 1)
     {
+      /*
       if (coords_from_file)
         {
           argc = 7;
@@ -415,19 +409,19 @@ int main(int argc, char**argv)
           if (read_flag == EOF) goto reached_EOF;
           fprintf(outfile,"%s %s %s %s %s ",args[2],args[3],args[4],args[5],args[6]);fflush(outfile);
           iline++;
-        } /* coords_from_file */
-      
-      /* Switch on how many arguments are supplied. */
-      /* Note that there are no 'breaks' after the cases, so these are entry points */
+        } //* coords_from_file *
+
+      //* Switch on how many arguments are supplied. *
+      //* Note that there are no 'breaks' after the cases, so these are entry points *
       switch(argc)
         {
         case 7 : strncpy(inbuff, args[6], MAXREAD);
-          if ((rest=strchr(inbuff, ',')))     /* If it contains a comma */
+          if ((rest=strchr(inbuff, ',')))     //* If it contains a comma *
             {
-              decdeg=2;                        /* Then not decimal degrees */
+              decdeg=2;                        //* Then not decimal degrees *
               begin=inbuff;
-              rest[0]='\0';                    /* Chop into sub string */
-              rest++;                          /* Move to next substring */
+              rest[0]='\0';                    //* Chop into sub string *
+              rest++;                          //* Move to next substring *
               ilon_deg=atoi(begin);
               begin=rest;
               if ((rest=strchr(begin, ',')))
@@ -445,10 +439,10 @@ int main(int argc, char**argv)
             }
           else
             {
-              decdeg=1;                        /* Else it's decimal */
+              decdeg=1;                        //* Else it's decimal *
               point.lon=atof(args[6]);
             }
-          
+
         case 6 : strncpy(inbuff, args[5], MAXREAD);
           if ((rest=strchr(inbuff, ',')))
             {
@@ -476,7 +470,7 @@ int main(int argc, char**argv)
               decdeg=1;
               point.lat=atof(args[5]);
             }
-          
+
         case 5 : strncpy(inbuff, args[4], MAXREAD);
           inbuff[0]=toupper(inbuff[0]);
           if (inbuff[0]=='K') units=1;
@@ -488,28 +482,28 @@ int main(int argc, char**argv)
               begin=inbuff+1;
               point.elev=atof(begin);
             }
-          
+
         case 4 : strncpy(inbuff, args[3], MAXREAD);
           inbuff[0]=toupper(inbuff[0]);
           if (inbuff[0]=='D') igdgc=1;
           else if (inbuff[0]=='C') igdgc=2;
           
         case 3 : strncpy(inbuff, args[2], MAXREAD);
-          if ((rest=strchr(inbuff, '-')))   /* If it contains a dash */
+          if ((rest=strchr(inbuff, '-')))   //* If it contains a dash *
             {
-              range = 2;                     /* They want a range */
-              rest[0]='\0';                  /* Sep dates */
+              range = 2;                     //* They want a range *
+              rest[0]='\0';                  //* Sep dates *
               rest++;
               begin=rest;
-              if ((rest=strchr(begin, '-')))    /* If it contains 2 dashs */
+              if ((rest=strchr(begin, '-')))    //* If it contains 2 dashs *
                 {
-                  rest[0]='\0';                  /* Sep step */
+                  rest[0]='\0';                  //* Sep step *
                   rest++;
-                  step=atof(rest);               /* Get step size */
+                  step=atof(rest);               //* Get step size *
                 }
-              if ((rest=strchr(begin, ',')))    /* If it contains a comma */
+              if ((rest=strchr(begin, ',')))    //* If it contains a comma *
                 {
-                  decyears=2;                    /* It's not decimal years */
+                  decyears=2;                    //* It's not decimal years *
                   rest[0]='\0';
                   rest++;
                   ieyear=atoi(begin);
@@ -553,7 +547,7 @@ int main(int argc, char**argv)
                 }
               else
                 {
-                  decyears=1;                    /* Else it's decimal years */
+                  decyears=1;                    //* Else it's decimal years *
                   sdate=atof(inbuff);
                   edate=atof(begin);
                 }
@@ -561,9 +555,9 @@ int main(int argc, char**argv)
           else
             {
               range = 1;
-              if ((rest=strchr(inbuff, ',')))   /* If it contains a comma */
+              if ((rest=strchr(inbuff, ',')))   //* If it contains a comma *
                 {
-                  decyears=2;                    /* It's not decimal years */
+                  decyears=2;                    //* It's not decimal years *
                   begin=inbuff;
                   rest[0]='\0';
                   rest++;
@@ -585,12 +579,12 @@ int main(int argc, char**argv)
                 }
               else
                 {
-                  decyears=1;                    /* Else it's decimal years */
+                  decyears=1;                    //* Else it's decimal years *
                   sdate=atof(args[2]);
                 }
             }
           if (sdate==0)
-            {                        /* If date not valid */
+            {                        //* If date not valid *
               decyears=-1;
               range=-1;
             }
@@ -603,14 +597,15 @@ int main(int argc, char**argv)
             }
           break;
         }
-      
+
       if (range == 2 && coords_from_file)
         {
           printf("Error in line %1d, date = %s: date ranges not allowed for file option\n\n",iline,args[2]);
           exit(2);
         }
-      
-      /*  Obtain the desired model file and read the data  */
+      */
+
+      //*  Obtain the desired model file and read the data  *
       
       warn_H = 0;
       warn_H_val = 99999.0;
@@ -620,90 +615,12 @@ int main(int argc, char**argv)
       
       if (need_to_read_model)
         {
-          while (stream == NULL)
-            {
-              printf("\n\n");
-              printf("What is the name of the model data file to be opened? ==> ");
-              safegets(inbuff,MAXREAD);
-              strcpy(mdfile, inbuff);
-              if (!(stream = fopen(mdfile, "rt")))
-                printf("\nError opening file %s.", mdfile);
-            }
-          rewind(stream);
-          
-          fileline = 0;                            /* First line will be 1 */
-          modelI = -1;                             /* First model will be 0 */
-          while (fgets(inbuff,MAXREAD,stream))     /* While not end of file
-                                                   * read to end of line or buffer */
-            {
-              fileline++;                           /* On new line */
-              
-              
-              if (strlen(inbuff) != RECL)       /* IF incorrect record size */
-                {
-                  printf("Corrupt record in file %s on line %d.\n", mdfile, fileline);
-                  fclose(stream);
-                  exit(5);
-                }
-              
-              /* old statement Dec 1999 */
-              /*       if (!strncmp(inbuff,"    ",4)){         /* If 1st 4 chars are spaces */
-              /* New statement Dec 1999 changed by wmd  required by year 2000 models */
-              if (!strncmp(inbuff,"   ",3))         /* If 1st 3 chars are spaces */
-                {
-                  modelI++;                           /* New model */
-                  
-                  if (modelI > MAXMOD)                /* If too many headers */
-                    {
-                      printf("Too many models in file %s on line %d.", mdfile, fileline);
-                      fclose(stream);
-                      exit(6);
-                    }
-                  
-                  irec_pos[modelI]=ftell(stream);
-                  /* Get fields from buffer into individual vars.  */
-                  sscanf(inbuff, "%s%lg%d%d%d%lg%lg%lg%lg", model[modelI], &epoch[modelI],
-                         &max1[modelI], &max2[modelI], &max3[modelI], &yrmin[modelI],
-                         &yrmax[modelI], &altmin[modelI], &altmax[modelI]);
-                  
-                  /* Compute date range for all models */
-                  if (modelI == 0)                    /*If first model */
-                    {
-                      minyr=yrmin[0];
-                      maxyr=yrmax[0];
-                    }
-                  else
-                    {
-                      if (yrmin[modelI]<minyr)
-                        {
-                          minyr=yrmin[modelI];
-                        }
-                      if (yrmax[modelI]>maxyr){
-                          maxyr=yrmax[modelI];
-                        }
-                    } /* if modelI != 0 */
-                  
-                } /* If 1st 3 chars are spaces */
-              
-            } /* While not end of model file */
-          
-          nmodel = modelI + 1;
-          fclose(stream);
-          
-          /* if date specified in command line then warn if past end of validity */
-          
-          if ((sdate>maxyr)&&(sdate<maxyr+1))
-            {
-              printf("\nWarning: The date %4.2f is out of range,\n", sdate);
-              printf("         but still within one year of model expiration date.\n");
-              printf("         An updated model file is available before 1.1.%4.0f\n",maxyr);
-            }
-          
-        } /*   if need_to_read_model */
+          readModel();
+        } //*   if need_to_read_model *
       
-      /*  Take in field data  */
+      //*  Take in field data  *
       
-      /* Get date */
+      //* Get date *
       
       if (coords_from_file && !arg_err && (decyears != 1 && decyears != 2))
         {printf("\nError: unrecognized date %s in coordinate file line %1d\n\n",args[2],iline); arg_err = 1;}
@@ -784,8 +701,8 @@ int main(int argc, char**argv)
                   printf("         An updated model file is available before 1.1.%4.0f\n",maxyr);
                 }
               
-            } /* if single date */
-        } /* (range == 1) */
+            } //* if single date *
+        } //* (range == 1) *
       else
         {
           while ((sdate<minyr)||(sdate>maxyr))
@@ -876,7 +793,7 @@ int main(int argc, char**argv)
                   printf("         but still within one year of model expiration date.\n");
                   printf("         An updated model file is available before 1.1.%4.0f\n",maxyr);
                 }
-            } /* while ((edate<=sdate)||(edate>maxyr+1)) */
+            } //* while ((edate<=sdate)||(edate>maxyr+1)) *
 
           while ((step<=0)||(step>(edate-sdate)))
             {
@@ -885,19 +802,19 @@ int main(int argc, char**argv)
               step=atof(inbuff);
             }
           
-        } /* if (range == 2) */
+        } //* if (range == 2) *
       
       
-      /* Pick model */
+      //* Pick model *
       for (modelI=0; modelI<nmodel; modelI++)
         if (sdate<yrmax[modelI]) break;
-      if (modelI == nmodel) modelI--;           /* if beyond end of last model use last model */
+      if (modelI == nmodel) modelI--;           //* if beyond end of last model use last model *
       
-      /* Get altitude min and max for selected model. */
+      //* Get altitude min and max for selected model. *
       minalt=altmin[modelI];
       maxalt=altmax[modelI];
       
-      /* Get Coordinate prefs */
+      //* Get Coordinate prefs *
 
       if (coords_from_file && !arg_err && (igdgc != 1 && igdgc != 2))
         {printf("\nError: unrecognized coordinate system %s in coordinate file line %1d\n\n",args[3],iline); arg_err = 1;}
@@ -912,14 +829,14 @@ int main(int argc, char**argv)
           igdgc=atoi(inbuff);
         }
       
-      /* If needed modify ranges to reflect coords. */
+      //* If needed modify ranges to reflect coords. *
       if (igdgc==2)
         {
-          minalt+=6371.2;  /* Add radius to ranges. */
+          minalt+=6371.2;  //* Add radius to ranges. *
           maxalt+=6371.2;
         }
       
-      /* Get unit prefs */
+      //* Get unit prefs *
       if (igdgc==1)
         {
           if (coords_from_file && !arg_err && (units > 3 || units < 1))
@@ -936,9 +853,9 @@ int main(int argc, char**argv)
               units=atoi(inbuff);
             }
         }
-      else units = 1; /* geocentric always in km */
+      else units = 1; //* geocentric always in km *
       
-      /* Do unit conversions if neccessary */
+      //* Do unit conversions if neccessary *
       if (units==2)
         {
           minalt*=1000.0;
@@ -950,7 +867,7 @@ int main(int argc, char**argv)
           maxalt*=FT2KM;
         }
       
-      /* Get altitude */
+      //* Get altitude *
 
       if (coords_from_file && !arg_err && (point.elev < minalt || point.elev > maxalt))
         {printf("\nError: unrecognized altitude %s in coordinate file line %1d\n\n",args[4],iline); arg_err = 1;}
@@ -965,7 +882,7 @@ int main(int argc, char**argv)
           point.elev=atof(inbuff);
         }
       
-      /* Convert altitude to km */
+      //* Convert altitude to km *
       if (units==2)
         {
           point.elev *= 0.001;
@@ -975,7 +892,7 @@ int main(int argc, char**argv)
           point.elev /= FT2KM;
         }
       
-      /* Get lat/long prefs */
+      //* Get lat/long prefs *
 
       if (coords_from_file && !arg_err && (decdeg != 1 && decdeg != 2))
         {printf("\nError: unrecognized lat %s or lon %s in coordinate file line %1d\n\n",args[5],args[6],iline); arg_err = 1;}
@@ -991,7 +908,7 @@ int main(int argc, char**argv)
         }
       
       
-      /* Get lat/lon */
+      //* Get lat/lon *
       
       if (decdeg==1)
         {
@@ -1014,7 +931,7 @@ int main(int argc, char**argv)
               safegets(inbuff, MAXREAD);
               point.lon=atof(inbuff);
             }
-        } /* if (decdeg==1) */
+        } //* if (decdeg==1) *
       else
         {
           point.lat=degrees_to_decimal(ilat_deg,ilat_min,ilat_sec);
@@ -1052,7 +969,7 @@ int main(int argc, char**argv)
                 {
                   printf("\nThe latitude %3.2f is out of range", point.lat);
                 }
-            } /* while ((latitude<-90)||(latitude>90)) */
+            } //* while ((latitude<-90)||(latitude>90)) *
           
           if (coords_from_file && !arg_err && (point.lon < -180 || point.lon > 180))
             {printf("\nError: unrecognized longitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;}
@@ -1086,10 +1003,10 @@ int main(int argc, char**argv)
                 {
                   printf("\nThe longitude %3.2f is out of range", point.lon);
                 }
-            } /* while ((longitude<-180)||(longitude>180)) */
-        } /* if (decdeg != 1) */
+            } //* while ((longitude<-180)||(longitude>180)) *
+        } //* if (decdeg != 1) *
 
-      /** This will compute everything needed for 1 point in time. **/
+      //** This will compute everything needed for 1 point in time. **
       
       
       if (max2[modelI] == 0)
@@ -1114,84 +1031,71 @@ int main(int argc, char**argv)
         }
       
       
-      /* Do the first calculations */
-      pointComponents xyz = shval3(
+      //* Do the first calculations *
+      gComp = shval3(
             point, nmax,
             &gha[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
-      x = xyz.x; //for where x,y,z, are used elsewhere
-      y = xyz.y;
-      z = xyz.z;
-      pointField a = dihf(xyz);
-      d = a.d;
-      i = a.i;
-      h = a.h;
-      f = a.f;
 
-      pointComponents xyztemp = shval3(
+      gField = dihf(gComp);
+
+     gCompTemp = shval3(
             point, nmax,
             &ghb[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
-      xtemp = xyztemp.x;
-      ytemp = xyztemp.y;
-      ztemp = xyztemp.z;
-      a = dihf(xyztemp);
-      dtemp = a.d;
-      itemp = a.i;
-      htemp = a.h;
-      ftemp = a.f;
+      gFieldTemp = dihf(gCompTemp);
+
+      gFieldDot.d = (gFieldTemp.d - gField.d);
+      if (gFieldDot.d > 180.0) gFieldDot.d -= 360.0;
+      if (gFieldDot.d <= -180.0) gFieldDot.d += 360.0;
+      gFieldDot.d *= 60.0;
       
-      ddot = (dtemp - d);
-      if (ddot > 180.0) ddot -= 360.0;
-      if (ddot <= -180.0) ddot += 360.0;
-      ddot *= 60.0;
+      gFieldDot.i = (gFieldTemp.i - gField.i)*60;
+      gFieldDot.h = gFieldTemp.h - gField.h;   gCompDot.x = gCompTemp.x - gComp.x;
+      gCompDot.y = gCompTemp.y - gComp.y;   gCompDot.z = gCompTemp.z - gComp.z;
+      gFieldDot.f = gFieldTemp.f - gField.f;
       
-      idot = (itemp - i)*60;
-      hdot = htemp - h;   xdot = xtemp - x;
-      ydot = ytemp - y;   zdot = ztemp - z;
-      fdot = ftemp - f;
+      //* deal with geographic and magnetic poles *
       
-      /* deal with geographic and magnetic poles */
-      
-      if (h < 100.0) /* at magnetic poles */
+      if (gField.h < 100.0) //* at magnetic poles *
         {
-          d = NaN;
-          ddot = NaN;
-          /* while rest is ok */
+          gField.d = NaN;
+          gFieldDot.d = NaN;
+          //* while rest is ok *
         }
       
-      if (h < 1000.0)
+      if (gField.h < 1000.0)
         {
           warn_H = 0;
           warn_H_strong = 1;
-          if (h<warn_H_strong_val) warn_H_strong_val = h;
+          if (gField.h<warn_H_strong_val) warn_H_strong_val = gField.h;
         }
-      else if (h < 5000.0 && !warn_H_strong)
+      else if (gField.h < 5000.0 && !warn_H_strong)
         {
           warn_H = 1;
-          if (h<warn_H_val) warn_H_val = h;
+          if (gField.h<warn_H_val) warn_H_val = gField.h;
         }
       
-      if (90.0-fabs(point.lat) <= 0.001) /* at geographic poles */
+      if (90.0-fabs(point.lat) <= 0.001) //* at geographic poles *
         {
-          x = NaN;
-          y = NaN;
-          d = NaN;
-          xdot = NaN;
-          ydot = NaN;
-          ddot = NaN;
+          gComp.x = NaN;
+          gComp.y = NaN;
+          gField.d = NaN;
+          gCompDot.x = NaN;
+          gCompDot.y = NaN;
+          gFieldDot.d = NaN;
           warn_P = 1;
           warn_H = 0;
           warn_H_strong = 0;
-          /* while rest is ok */
+          //* while rest is ok *
         }
       
-      /** Above will compute everything for 1 point in time.  **/
+      //** Above will compute everything for 1 point in time.  **
       
       
-      /*  Output the final results. */
+      //*  Output the final results. *
 
       if (coords_from_file)
         {
-          print_result_file(outfile, d, i, h, x, y, z, f,ddot,idot,hdot,xdot,ydot,zdot,fdot);
+          print_result_file(outfile, gField, gComp, gFieldDot,gCompDot);
         }
       else
         {
@@ -1225,13 +1129,13 @@ int main(int argc, char**argv)
                 printf("%d-%d-%d (yyyy-mm-dd)\n\n",  isyear, ismonth, isday);
               
               print_header();
-              print_result(sdate,d, i, h, x, y, z, f);
+              print_result(sdate, gField, gComp);
               print_long_dashed_line();
               print_header_sv();
-              print_result_sv(sdate,ddot,idot,hdot,xdot,ydot,zdot,fdot);
+              print_result_sv(sdate,gFieldDot,gCompDot);
               print_dashed_line();
               
-            } /* if range == 1 */
+            } //* if range == 1 *
           else
             {
               printf("  Range of Interest: ");
@@ -1241,7 +1145,7 @@ int main(int argc, char**argv)
                 printf("%d-%d-%d to %d-%d-%d (yyyy-mm-dd), step %4.2f (years)\n\n", isyear, ismonth, isday,  ieyear, iemonth, ieday, step);
               
               print_header();
-              print_result(sdate,d, i, h, x, y, z, f);
+              print_result(sdate, gField, gComp);
               
               for(syr=sdate+step;syr<(edate+step);syr+=step)
                 {
@@ -1251,18 +1155,18 @@ int main(int argc, char**argv)
                       print_long_dashed_line();
                     }
                   
-                  /* Do the calculations */
+                  //* Do the calculations *
                   
                   for (counter=0;counter<step;counter++)
                     {
-                      if (max2[modelI] == 0){       /*If not last element in array */
-                          if (syr>yrmin[modelI+1]){  /* And past model boundary */
-                              modelI++;              /* Get next model */
+                      if (max2[modelI] == 0){       //*If not last element in array *
+                          if (syr>yrmin[modelI+1]){  //* And past model boundary *
+                              modelI++;              //* Get next model *
                             }
                         }
-                    } /* for counter */
+                    } //* for counter *
                   
-                  if (max2[modelI] == 0)       /*If still not last element */
+                  if (max2[modelI] == 0)       //*If still not last element *
                     {
                       getshc(stream, mdfile, 1, irec_pos[modelI], max1[modelI], &gh1[0]);
                       getshc(stream, mdfile, 1, irec_pos[modelI+1], max1[modelI+1], &gh2[0]);
@@ -1282,71 +1186,57 @@ int main(int argc, char**argv)
                       nmax = extrapsh(syr+1, epoch[modelI], max1[modelI], max2[modelI],
                                       &ghb[0], &gh1[0], &gh2[0]);
                     }
-                  pointComponents xyz = shval3(
+                  gComp = shval3(
                         point, nmax,
                         &gha[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
-                  x = xyz.x; //for where x,y,z, are used elsewhere
-                  y = xyz.y;
-                  z = xyz.z;
-                  pointField a = dihf(xyz);
-                  d = a.d;
-                  i = a.i;
-                  h = a.h;
-                  f = a.f;
+                  gField = dihf(gComp);
 
-                  pointComponents xyztemp = shval3(
+                  gCompTemp = shval3(
                         point, nmax,
                         &ghb[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
-                  xtemp = xyztemp.x;
-                  ytemp = xyztemp.y;
-                  ztemp = xyztemp.z;
-                  a = dihf(xyztemp);
-                  dtemp = a.d;
-                  itemp = a.i;
-                  htemp = a.h;
-                  ftemp = a.f;
+                  gFieldTemp = dihf(gCompTemp);
 
-                  ddot = dtemp - d;
-                  if (ddot > 180.0) ddot -= 360.0;
-                  if (ddot <= -180.0) ddot += 360.0;
-                  ddot *= 60.0;
+                  gFieldDot.d = gFieldTemp.d - gField.d;
+                  if (gFieldDot.d > 180.0) gFieldDot.d -= 360.0;
+                  if (gFieldDot.d <= -180.0) gFieldDot.d += 360.0;
+                  gFieldDot.d *= 60.0;
                   
-                  idot = (itemp - i)*60.;
-                  hdot = htemp - h;   xdot = xtemp - x;
-                  ydot = ytemp - y;   zdot = ztemp - z;
-                  fdot = ftemp - f;
+                  gFieldDot.i = (gFieldTemp.i - gField.i)*60.;
+                  gFieldDot.h = gFieldTemp.h - gField.h;   gCompDot.x = gCompTemp.x - gComp.x;
+                  gCompDot.y = gCompTemp.y - gComp.y;   gCompDot.z = gCompTemp.z - gComp.z;
+                  gFieldDot.f = gFieldTemp.f - gField.f;
                   
-                  /* deal with geographic and magnetic poles */
+                  //* deal with geographic and magnetic poles *
                   
-                  if (h < 100.0) /* at magnetic poles */
+                  if (gField.h < 100.0) //* at magnetic poles *
                     {
-                      d = NaN;
-                      ddot = NaN;
-                      /* while rest is ok */
+                      gField.d = NaN;
+                      gFieldDot.d = NaN;
+                      //* while rest is ok *
                     }
                   
-                  if (90.0-fabs(point.lat) <= 0.001) /* at geographic poles */
+                  if (90.0-fabs(point.lat) <= 0.001) //* at geographic poles *
                     {
-                      x = NaN;
-                      y = NaN;
-                      d = NaN;
-                      xdot = NaN;
-                      ydot = NaN;
-                      ddot = NaN;
+                      gComp.x = NaN;
+                      gComp.y = NaN;
+                      gField.d = NaN;
+                      gCompDot.x = NaN;
+                      gCompDot.y = NaN;
+                      gFieldDot.d = NaN;
                       warn_P = 1;
                       warn_H = 0;
                       warn_H_strong = 0;
-                      /* while rest is ok */
+                      //* while rest is ok *
                     }
                   
-                  print_result(syr, d, i, h, x, y, z, f);
-                } /* for syr */
+                  print_result(syr, gField, gComp);
+                } //* for syr *
 
               print_long_dashed_line();
               print_header_sv();
-              print_result_sv(edate,ddot,idot,hdot,xdot,ydot,zdot,fdot);
+              print_result_sv(edate,gFieldDot,gCompDot);
               print_dashed_line();
-            } /* if range > 1 */
+            } //* if range > 1 *
 
           if (warn_H)
             {
@@ -1364,15 +1254,15 @@ int main(int argc, char**argv)
             {
               printf("\nWarning: Location is at geographic pole where X, Y, and declination are not computed\n\n");
             }
-        } /* if not coords_from_file */
+        } //* if not coords_from_file *
 
       if (coords_from_file)
         again = !feof(coordfile) && !arg_err;
       else
         {
-          if (argc==7) again = 0; /* run command line only once */
-          else
-            do
+          //if (argc==7) again = 0; //* run command line only once *
+          //else
+          do
             {
               printf("\n  Enter");
               printf("\n     0) to quit.");
@@ -1385,11 +1275,11 @@ int main(int argc, char**argv)
               if (again == 2) { need_to_read_model = 0; again = 1;}
             }
           while (again != 0 && again != 1);
-        } /* if not coords_from_file */
+        } //* if not coords_from_file *
 
       if (again == 1)
         {
-          /* Reset defaults to catch on all while loops */
+          //* Reset defaults to catch on all while loops *
           igdgc=decyears=units=decdeg=-1;
           ismonth=isday=isyear=sdate=edate=range=step=-1;
           point.lat=ilat_deg=ilat_min=ilat_sec=200;
@@ -1397,13 +1287,14 @@ int main(int argc, char**argv)
           point.elev=-9999999;
           argc = 1;
         }
-    } /* while (again == 1) */
+    } //* while (again == 1) *
 
 reached_EOF:
   if (coords_from_file) printf("\n Processed %1d lines\n\n",iline);
 
   if (coords_from_file && !feof(coordfile) && arg_err) printf("Terminated prematurely due to argument error in coordinate file\n\n");
 
+  /* unwanted argument protip
   if (argc<7)
     {
       printf("\nThe same result could have been generated with the following command:\n");
@@ -1460,8 +1351,10 @@ reached_EOF:
                  ilon_deg, ilon_min, ilon_sec);
         }
     }
+    */
   return 0;
 }
+
 
 void print_dashed_line(void)
 {
@@ -1484,8 +1377,17 @@ void print_header(void)
   return;
 }
 
-void print_result(double date, double d, double i, double h, double x, double y, double z, double f)
+void print_result(double date, pointField field, pointComponents comp)
 {
+  double d = field.d;
+  double i = field.i;
+  double h = field.h;
+  double f = field.f;
+
+  double x = comp.x;
+  double y = comp.y;
+  double z = comp.z;
+
   int   ddeg,ideg;
   double dmin,imin;
 
@@ -1538,8 +1440,17 @@ void print_header_sv(void)
   printf("   (yr)      (min/yr)    (min/yr)    (nT/yr)  (nT/yr)  (nT/yr)  (nT/yr)  (nT/yr)\n");
 } /* print_header_sv */
 
-void print_result_sv(double date, double ddot, double idot, double hdot, double xdot, double ydot, double zdot, double fdot)
+void print_result_sv(double date, pointField fieldDot,pointComponents compDot )
 {
+  double ddot = fieldDot.d;
+  double idot = fieldDot.i;
+  double hdot = fieldDot.h;
+  double fdot = fieldDot.f;
+
+  double xdot = compDot.x;
+  double ydot = compDot.y;
+  double zdot = compDot.z;
+
   if (my_isnan(ddot))
     {
       if (my_isnan(xdot))
@@ -1552,9 +1463,26 @@ void print_result_sv(double date, double ddot, double idot, double hdot, double 
   return;
 } /* print_result_sv */
 
-void print_result_file(FILE *outf, double d, double i, double h, double x, double y, double z, double f,
-                       double ddot, double idot, double hdot, double xdot, double ydot, double zdot, double fdot)
+void print_result_file(FILE *outf, pointField field, pointComponents comp, pointField fieldDot, pointComponents compDot)
 {
+  double d = field.d;
+  double i = field.i;
+  double h = field.h;
+  double f = field.f;
+
+  double x = comp.x;
+  double y = comp.y;
+  double z = comp.z;
+
+  double ddot = fieldDot.d;
+  double idot = fieldDot.i;
+  double hdot = fieldDot.h;
+  double fdot = fieldDot.f;
+
+  double xdot = compDot.x;
+  double ydot = compDot.y;
+  double zdot = compDot.z;
+
   int   ddeg,ideg;
   double dmin,imin;
   
@@ -1709,4 +1637,87 @@ double julday(int month, int day, int year)
   double day_in_year = (days[month - 1] + day + (month > 2 ? leap_year : 0));
 
   return ((double)year + (day_in_year / (365.0 + leap_year)));
+}
+
+void readModel() {
+
+  while (stream == NULL)
+    {
+      printf("\n\n");
+      printf("What is the name of the model data file to be opened? ==> ");
+      safegets(inbuff,MAXREAD);
+      strcpy(mdfile, inbuff);
+      if (!(stream = fopen(mdfile, "rt")))
+        printf("\nError opening file %s.", mdfile);
+    }
+  rewind(stream);
+
+  fileline = 0;                            //* First line will be 1 *
+  modelI = -1;                             //* First model will be 0 *
+  while (fgets(inbuff,MAXREAD,stream))     //* While not end of file
+    //* read to end of line or buffer *
+    {
+      fileline++;                           //* On new line *
+
+
+      if (strlen(inbuff) != RECL)       //* IF incorrect record size *
+        {
+          printf("Corrupt record in file %s on line %d.\n", mdfile, fileline);
+          fclose(stream);
+          exit(5);
+        }
+
+      //* old statement Dec 1999 *
+      //*       if (!strncmp(inbuff,"    ",4)){         //* If 1st 4 chars are spaces *
+      //* New statement Dec 1999 changed by wmd  required by year 2000 models *
+      if (!strncmp(inbuff,"   ",3))         //* If 1st 3 chars are spaces *
+        {
+          modelI++;                           //* New model *
+
+          if (modelI > MAXMOD)                //* If too many headers *
+            {
+              printf("Too many models in file %s on line %d.", mdfile, fileline);
+              fclose(stream);
+              exit(6);
+            }
+
+          irec_pos[modelI]=ftell(stream);
+          //* Get fields from buffer into individual vars.  *
+          sscanf(inbuff, "%s%lg%d%d%d%lg%lg%lg%lg", model[modelI], &epoch[modelI],
+                 &max1[modelI], &max2[modelI], &max3[modelI], &yrmin[modelI],
+                 &yrmax[modelI], &altmin[modelI], &altmax[modelI]);
+
+          //* Compute date range for all models *
+          if (modelI == 0)                    //*If first model *
+            {
+              minyr=yrmin[0];
+              maxyr=yrmax[0];
+            }
+          else
+            {
+              if (yrmin[modelI]<minyr)
+                {
+                  minyr=yrmin[modelI];
+                }
+              if (yrmax[modelI]>maxyr){
+                  maxyr=yrmax[modelI];
+                }
+            } //* if modelI != 0 *
+
+        } //* If 1st 3 chars are spaces *
+
+    } //* While not end of model file *
+
+  nmodel = modelI + 1;
+  fclose(stream);
+
+  //* if date specified in command line then warn if past end of validity *
+
+  if ((sdate>maxyr)&&(sdate<maxyr+1))
+    {
+      printf("\nWarning: The date %4.2f is out of range,\n", sdate);
+      printf("         but still within one year of model expiration date.\n");
+      printf("         An updated model file is available before 1.1.%4.0f\n",maxyr);
+    }
+
 }
