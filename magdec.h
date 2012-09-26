@@ -18,6 +18,12 @@ const double EXT_COEFF1 = 0, EXT_COEFF2 = 0, EXT_COEFF3 = 0;
 const int MAXDEG = 13;
 const int MAXCOEFF = (MAXDEG*(MAXDEG+2)+1); //index starts with 1!, (from old Fortran?)
 
+struct pointCoords {
+  double lat, lon, elev; //latitude, longitude (degrees),
+                         //elevation from WGS84 (km),
+                         //in geodetic coordinates
+};
+
 struct pointComponents {
   double x, y, z; //north, east, and downward component of magnetic field at
   //a [geocentric/geodetic?] point. Units are nT.
@@ -30,101 +36,52 @@ struct pointField {
   double f; //total field strength
 };
 
-pointField dihf (const pointComponents &xyz)
-{
-  double sn = 0.0001; //small number
-  double h2;
-  double hpx;
-
-  double x = xyz.x;
-  double y = xyz.y;
-  double z = xyz.z;
-
-  double d, i, h, f;
-
-  h2 = x*x + y*y;
-  h = sqrt(h2);       /* calculate horizontal intensity */
-  f = sqrt(h2 + z*z);      /* calculate total intensity */
-  if (f < sn)
-    {
-      d = NaN;        /* If d and i cannot be determined, */
-      i = NaN;        /*       set equal to NaN         */
-    }
-  else
-    {
-      i = atan2(z, h);
-      if (h < sn)
-        {
-          d = NaN;
-        }
-      else
-        {
-          hpx = h + x;
-          if (hpx < sn) //
-            {
-              d = PI;
-            }
-          else
-            {
-              d = 2.0 * atan2(y, hpx);
-            }
-        }
-    }
-
-  pointField dihf;
-  dihf.d = d * RAD2DEG;
-  dihf.i = i * RAD2DEG;
-  dihf.h = h;
-  dihf.f = f;
-  return(dihf);
-}
-
-/****************************************************************************/
-/*                                                                          */
-/*                           Subroutine shval3                              */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*     Calculates field components from spherical harmonic (sh)             */
-/*     models.                                                              */
-/*                                                                          */
-/*     Input:                                                               */
-/*           igdgc     - indicates coordinate system used; set equal        */
-/*                       to 1 if geodetic, 2 if geocentric                  */
-/*           latitude  - north latitude, in degrees                         */
-/*           longitude - east longitude, in degrees                         */
-/*           elev      - WGS84 altitude above ellipsoid (igdgc=1), or       */
-/*                       radial distance from earth's center (igdgc=2)      */
-/*           a2,b2     - squares of semi-major and semi-minor axes of       */
-/*                       the reference spheroid used for transforming       */
-/*                       between geodetic and geocentric coordinates        */
-/*                       or components                                      */
-/*           nmax      - maximum degree and order of coefficients           */
-/*           iext      - external coefficients flag (=0 if none)            */
-/*           ext1,2,3  - the three 1st-degree external coefficients         */
-/*                       (not used if iext = 0)                             */
-/*                                                                          */
-/*     Output:                                                              */
-/*           x         - northward component                                */
-/*           y         - eastward component                                 */
-/*           z         - vertically-downward component                      */
-/*                                                                          */
-/*     based on subroutine 'igrf' by D. R. Barraclough and S. R. C. Malin,  */
-/*     report no. 71/1, institute of geological sciences, U.K.              */
-/*                                                                          */
-/*     FORTRAN                                                              */
-/*           Norman W. Peddie                                               */
-/*           USGS, MS 964, box 25046 Federal Center, Denver, CO.  80225     */
-/*                                                                          */
-/*     C                                                                    */
-/*           C. H. Shaffer                                                  */
-/*           Lockheed Missiles and Space Company, Sunnyvale CA              */
-/*           August 17, 1988                                                */
-/*                                                                          */
-/****************************************************************************/
+/***************************************************************************
+*                                                                          *
+*                           Subroutine shval3                              *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*     Calculates field components from spherical harmonic (sh)             *
+*     models.                                                              *
+*                                                                          *
+*     Input:                                                               *
+*           igdgc     - indicates coordinate system used; set equal        *
+*                       to 1 if geodetic, 2 if geocentric                  *
+*           latitude  - north latitude, in degrees                         *
+*           longitude - east longitude, in degrees                         *
+*           elev      - WGS84 altitude above ellipsoid (igdgc=1), or       *
+*                       radial distance from earth's center (igdgc=2)      *
+*           a2,b2     - squares of semi-major and semi-minor axes of       *
+*                       the reference spheroid used for transforming       *
+*                       between geodetic and geocentric coordinates        *
+*                       or components                                      *
+*           nmax      - maximum degree and order of coefficients           *
+*           iext      - external coefficients flag (=0 if none)            *
+*           ext1,2,3  - the three 1st-degree external coefficients         *
+*                       (not used if iext = 0)                             *
+*                                                                          *
+*     Output:                                                              *
+*           x         - northward component                                *
+*           y         - eastward component                                 *
+*           z         - vertically-downward component                      *
+*                                                                          *
+*     based on subroutine 'igrf' by D. R. Barraclough and S. R. C. Malin,  *
+*     report no. 71/1, institute of geological sciences, U.K.              *
+*                                                                          *
+*     FORTRAN                                                              *
+*           Norman W. Peddie                                               *
+*           USGS, MS 964, box 25046 Federal Center, Denver, CO.  80225     *
+*                                                                          *
+*     C                                                                    *
+*           C. H. Shaffer                                                  *
+*           Lockheed Missiles and Space Company, Sunnyvale CA              *
+*           August 17, 1988                                                *
+*                                                                          *
+***************************************************************************/
 
 pointComponents shval3(
-    double flat, double flon, double elev, //geodetic coordinates
+    pointCoords point, //geodetic coordinates
     int nmax, //"Maximum degree and order of coefficients
     const double* ghArray,
     int iext, double ext1, double ext2, double ext3)
@@ -156,27 +113,27 @@ pointComponents shval3(
 
   a2 = 40680631.59;            /* WGS84 */
   b2 = 40408299.98;            /* WGS84 */
-  r = elev;
-  slat = sin( flat * dtr );
-  if ((90.0 - flat) < 0.001)
+  r = point.elev;
+  slat = sin( point.lat * dtr );
+  if ((90.0 - point.lat) < 0.001)
     {
       aa = 89.999;            /*  300 ft. from North pole  */
     }
   else
     {
-      if ((90.0 + flat) < 0.001)
+      if ((90.0 + point.lat) < 0.001)
         {
           aa = -89.999;        /*  300 ft. from South pole  */
         }
       else
         {
-          aa = flat;
+          aa = point.lat;
         }
     }
 
   clat = cos( aa * dtr );
-  sl[1] = sin( flon * dtr );
-  cl[1] = cos( flon * dtr );
+  sl[1] = sin( point.lon * dtr );
+  cl[1] = cos( point.lon * dtr );
 
   sd = 0.0;
   cd = 1.0;
@@ -184,18 +141,18 @@ pointComponents shval3(
   n = 0;
   m = 1;
   npq = (nmax * (nmax + 3)) / 2;
-  // if (igdgc == 1) {
+
   aa = a2 * clat * clat;
   bb = b2 * slat * slat;
   cc = aa + bb;
   dd = sqrt( cc );
-  r = sqrt( elev * (elev + 2.0 * dd) + (a2 * aa + b2 * bb) / cc );
-  cd = (elev + dd) / r;
+  r = sqrt( point.elev * (point.elev + 2.0 * dd) + (a2 * aa + b2 * bb) / cc );
+  cd = (point.elev + dd) / r;
   sd = (a2 - b2) / dd * slat * clat / r;
   aa = slat;
   slat = slat * cd - clat * sd;
   clat = clat * cd + aa * sd;
-  //}
+
   ratio = earths_radius / r;
   aa = sqrt( 3.0 );
   p[1] = 2.0 * slat;
@@ -277,6 +234,55 @@ pointComponents shval3(
   xyz.z = xyz.z * cd - aa * sd;
 
   return(xyz);
+}
+
+pointField dihf (const pointComponents &xyz)
+{
+  double sn = 0.0001; //small number
+  double h2;
+  double hpx;
+
+  double x = xyz.x;
+  double y = xyz.y;
+  double z = xyz.z;
+
+  double d, i, h, f;
+
+  h2 = x*x + y*y;
+  h = sqrt(h2);       /* calculate horizontal intensity */
+  f = sqrt(h2 + z*z);      /* calculate total intensity */
+  if (f < sn)
+    {
+      d = NaN;        /* If d and i cannot be determined, */
+      i = NaN;        /*       set equal to NaN         */
+    }
+  else
+    {
+      i = atan2(z, h);
+      if (h < sn)
+        {
+          d = NaN;
+        }
+      else
+        {
+          hpx = h + x;
+          if (hpx < sn) //
+            {
+              d = PI;
+            }
+          else
+            {
+              d = 2.0 * atan2(y, hpx);
+            }
+        }
+    }
+
+  pointField dihf;
+  dihf.d = d * RAD2DEG;
+  dihf.i = i * RAD2DEG;
+  dihf.h = h;
+  dihf.f = f;
+  return(dihf);
 }
 
 #endif

@@ -326,13 +326,14 @@ int main(int argc, char**argv)
   double altmax[MAXMOD];
   double minalt;
   double maxalt;
-  double alt=-999999;
   double sdate=-1;
   double step=-1;
   double syr;
   double edate=-1;
-  double latitude=200;
-  double longitude=200;
+  pointCoords point;
+  point.lat=200;
+  point.lon=200;
+  point.elev=-999999;
   double ddot;
   double fdot;
   double hdot;
@@ -356,9 +357,6 @@ int main(int argc, char**argv)
   double julday(int month, int day, int year);
   int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2, int gh);
   int extrapsh(double date, double dte1, int nmax1, int nmax2, int gh);
-  //int shval3(int igdgc, double flat, double flon, double elev, int nmax,
-  //           int gh, int iext, double ext1, double ext2, double ext3);
-  //int dihf (int gh);
   int   safegets(char *buffer,int n);
   int getshc(char file[PATH], int iflag, long strec, int nmax_of_gh, int gh);
 
@@ -483,7 +481,7 @@ int main(int argc, char**argv)
           else
             {
               decdeg=1;                        /* Else it's decimal */
-              longitude=atof(args[6]);
+              point.lon=atof(args[6]);
             }
           
         case 6 : strncpy(inbuff, args[5], MAXREAD);
@@ -511,7 +509,7 @@ int main(int argc, char**argv)
           else
             {
               decdeg=1;
-              latitude=atof(args[5]);
+              point.lat=atof(args[5]);
             }
           
         case 5 : strncpy(inbuff, args[4], MAXREAD);
@@ -523,7 +521,7 @@ int main(int argc, char**argv)
             {
               inbuff[0]='\0';
               begin=inbuff+1;
-              alt=atof(begin);
+              point.elev=atof(begin);
             }
           
         case 4 : strncpy(inbuff, args[3], MAXREAD);
@@ -989,27 +987,27 @@ int main(int argc, char**argv)
       
       /* Get altitude */
 
-      if (coords_from_file && !arg_err && (alt < minalt || alt > maxalt))
+      if (coords_from_file && !arg_err && (point.elev < minalt || point.elev > maxalt))
         {printf("\nError: unrecognized altitude %s in coordinate file line %1d\n\n",args[4],iline); arg_err = 1;}
 
-      while ((alt<minalt)||(alt>maxalt))
+      while ((point.elev<minalt)||(point.elev>maxalt))
         {
           if (igdgc==2) printf("\n\nEnter geocentric altitude in km (%.2f to %.2f): ", minalt, maxalt);
           if (igdgc==1 && units==1) printf("\n\nEnter geodetic altitude above mean sea level in km (%.2f to %.2f): ", minalt, maxalt);
           if (igdgc==1 && units==2) printf("\n\nEnter geodetic altitude above mean sea level in meters (%.2f to %.2f): ", minalt, maxalt);
           if (igdgc==1 && units==3) printf("\n\nEnter geodetic altitude above mean sea level in feet (%.2f to %.2f): ", minalt, maxalt);
           safegets(inbuff, MAXREAD);
-          alt=atof(inbuff);
+          point.elev=atof(inbuff);
         }
       
       /* Convert altitude to km */
       if (units==2)
         {
-          alt *= 0.001;
+          point.elev *= 0.001;
         }
       else if (units==3)
         {
-          alt /= FT2KM;
+          point.elev /= FT2KM;
         }
       
       /* Get lat/long prefs */
@@ -1032,35 +1030,35 @@ int main(int argc, char**argv)
       
       if (decdeg==1)
         {
-          if (coords_from_file && !arg_err && (latitude < -90 || latitude > 90))
+          if (coords_from_file && !arg_err && (point.lat < -90 || point.lat > 90))
             {printf("\nError: unrecognized latitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;}
 
-          while ((latitude<-90)||(latitude>90))
+          while ((point.lat<-90)||(point.lat>90))
             {
               printf("\n\nEnter the decimal latitude (-90 to 90) (- for Southern hemisphere).\n");
               safegets(inbuff, MAXREAD);
-              latitude=atof(inbuff);
+              point.lat=atof(inbuff);
             }
 
-          if (coords_from_file && !arg_err && (longitude < -180 || longitude > 180))
+          if (coords_from_file && !arg_err && (point.lon < -180 || point.lon > 180))
             {printf("\nError: unrecognized longitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;}
 
-          while ((longitude<-180)||(longitude>180))
+          while ((point.lon<-180)||(point.lon>180))
             {
               printf("\n\nEnter the decimal longitude (-180 to 180) (- for Western hemisphere).\n");
               safegets(inbuff, MAXREAD);
-              longitude=atof(inbuff);
+              point.lon=atof(inbuff);
             }
         } /* if (decdeg==1) */
       else
         {
-          latitude=degrees_to_decimal(ilat_deg,ilat_min,ilat_sec);
-          longitude=degrees_to_decimal(ilon_deg,ilon_min,ilon_sec);
+          point.lat=degrees_to_decimal(ilat_deg,ilat_min,ilat_sec);
+          point.lon=degrees_to_decimal(ilon_deg,ilon_min,ilon_sec);
 
-          if (coords_from_file && !arg_err && (latitude < -90 || latitude > 90))
+          if (coords_from_file && !arg_err && (point.lat < -90 || point.lat > 90))
             {printf("\nError: unrecognized latitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;}
 
-          while ((latitude<-90)||(latitude>90))
+          while ((point.lat<-90)||(point.lat>90))
             {
               ilat_deg=ilat_min=ilat_sec=200;
               printf("\n\nEnter the decimal latitude (-90 to 90) (- for Southern hemisphere).\n");
@@ -1083,18 +1081,18 @@ int main(int argc, char**argv)
                   ilat_sec=atoi(inbuff);
                 }
               
-              latitude=degrees_to_decimal(ilat_deg,ilat_min,ilat_sec);
+              point.lat=degrees_to_decimal(ilat_deg,ilat_min,ilat_sec);
               
-              if ((latitude<-90)||(latitude>90))
+              if ((point.lat<-90)||(point.lat>90))
                 {
-                  printf("\nThe latitude %3.2f is out of range", latitude);
+                  printf("\nThe latitude %3.2f is out of range", point.lat);
                 }
             } /* while ((latitude<-90)||(latitude>90)) */
           
-          if (coords_from_file && !arg_err && (longitude < -180 || longitude > 180))
+          if (coords_from_file && !arg_err && (point.lon < -180 || point.lon > 180))
             {printf("\nError: unrecognized longitude %s in coordinate file line %1d\n\n",args[6],iline); arg_err = 1;}
 
-          while ((longitude<-180)||(longitude>180))
+          while ((point.lon<-180)||(point.lon>180))
             {
               ilon_deg=ilon_min=ilon_sec=200;
               printf("\n\nEnter the decimal longitude (-180 to 180) (- for Western hemisphere).\n");
@@ -1117,11 +1115,11 @@ int main(int argc, char**argv)
                   ilon_sec=atoi(inbuff);
                 }
               
-              longitude=degrees_to_decimal(ilon_deg,ilon_min,ilon_sec);
+              point.lon=degrees_to_decimal(ilon_deg,ilon_min,ilon_sec);
               
-              if ((longitude<-180)||(longitude>180))
+              if ((point.lon<-180)||(point.lon>180))
                 {
-                  printf("\nThe longitude %3.2f is out of range", longitude);
+                  printf("\nThe longitude %3.2f is out of range", point.lon);
                 }
             } /* while ((longitude<-180)||(longitude>180)) */
         } /* if (decdeg != 1) */
@@ -1149,7 +1147,7 @@ int main(int argc, char**argv)
       
       /* Do the first calculations */
       pointComponents xyz = shval3(
-            latitude, longitude, alt, nmax,
+            point, nmax,
             &gha[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
       x = xyz.x; //for where x,y,z, are used elsewhere
       y = xyz.y;
@@ -1161,7 +1159,7 @@ int main(int argc, char**argv)
       f = a.f;
 
       pointComponents xyztemp = shval3(
-            latitude, longitude, alt, nmax,
+            point, nmax,
             &ghb[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
       xtemp = xyztemp.x;
       ytemp = xyztemp.y;
@@ -1203,7 +1201,7 @@ int main(int argc, char**argv)
           if (h<warn_H_val) warn_H_val = h;
         }
       
-      if (90.0-fabs(latitude) <= 0.001) /* at geographic poles */
+      if (90.0-fabs(point.lat) <= 0.001) /* at geographic poles */
         {
           x = NaN;
           y = NaN;
@@ -1231,8 +1229,8 @@ int main(int argc, char**argv)
           printf("\n\n\n  Model: %s \n", model[modelI]);
           if (decdeg==1)
             {
-              printf("  Latitude: %4.2f deg\n", latitude);
-              printf("  Longitude: %4.2f deg\n", longitude);
+              printf("  Latitude: %4.2f deg\n", point.lat);
+              printf("  Longitude: %4.2f deg\n", point.lon);
             }
           else
             {
@@ -1243,11 +1241,11 @@ int main(int argc, char**argv)
             }
           printf("  Altitude: ");
           if (units==1)
-            printf("%.2f km\n", alt);
+            printf("%.2f km\n", point.elev);
           else if (units==2)
-            printf("%.2f meters\n", alt*1000.0);
+            printf("%.2f meters\n", point.elev*1000.0);
           else
-            printf("%.2f ft\n", (alt*FT2KM));
+            printf("%.2f ft\n", (point.elev*FT2KM));
           
           if (range==1)
             {
@@ -1314,7 +1312,7 @@ int main(int argc, char**argv)
                                       max2[modelI], 4);
                     }
                   pointComponents xyz = shval3(
-                        latitude, longitude, alt, nmax,
+                        point, nmax,
                         &gha[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
                   x = xyz.x; //for where x,y,z, are used elsewhere
                   y = xyz.y;
@@ -1326,7 +1324,7 @@ int main(int argc, char**argv)
                   f = a.f;
 
                   pointComponents xyztemp = shval3(
-                        latitude, longitude, alt, nmax,
+                        point, nmax,
                         &ghb[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
                   xtemp = xyztemp.x;
                   ytemp = xyztemp.y;
@@ -1356,7 +1354,7 @@ int main(int argc, char**argv)
                       /* while rest is ok */
                     }
                   
-                  if (90.0-fabs(latitude) <= 0.001) /* at geographic poles */
+                  if (90.0-fabs(point.lat) <= 0.001) /* at geographic poles */
                     {
                       x = NaN;
                       y = NaN;
@@ -1423,9 +1421,9 @@ int main(int argc, char**argv)
           /* Reset defaults to catch on all while loops */
           igdgc=decyears=units=decdeg=-1;
           ismonth=isday=isyear=sdate=edate=range=step=-1;
-          latitude=ilat_deg=ilat_min=ilat_sec=200;
-          longitude=ilon_deg=ilon_min=ilon_sec=200;
-          alt=-9999999;
+          point.lat=ilat_deg=ilat_min=ilat_sec=200;
+          point.lon=ilon_deg=ilon_min=ilon_sec=200;
+          point.elev=-9999999;
           argc = 1;
         }
     } /* while (again == 1) */
@@ -1471,19 +1469,19 @@ reached_EOF:
         }
       if (units==1)
         {
-          printf("K%.2f ", alt);
+          printf("K%.2f ", point.elev);
         }
       else if (units==2)
         {
-          printf("M%.2f ", alt*1000.0);
+          printf("M%.2f ", point.elev*1000.0);
         }
       else
         {
-          printf("F%.2f ", (alt*FT2KM));
+          printf("F%.2f ", (point.elev*FT2KM));
         }
       if (decdeg==1)
         {
-          printf("%3.2f %4.2f\n\n", latitude, longitude);
+          printf("%3.2f %4.2f\n\n", point.lat, point.lon);
         }
       else
         {
@@ -2377,7 +2375,6 @@ int shval3(int igdgc, double flat, double flon, double elev, int nmax,
 /*                                                                          */
 /****************************************************************************/
 
-//note: should be member function of point-declination class
 /*
 int dihf (int gh)
 {
