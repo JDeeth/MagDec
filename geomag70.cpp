@@ -109,6 +109,7 @@
 #include <ctype.h>
 #include <math.h> 
 
+//code moved into other files
 #include "magdec.h"
 
 #ifndef SEEK_SET //for file loading purposes
@@ -367,7 +368,7 @@ int main(int argc, char**argv)
   int extrapsh(double date, double dte1, int nmax1, int nmax2, int gh);
   int shval3(int igdgc, double flat, double flon, double elev, int nmax,
              int gh, int iext, double ext1, double ext2, double ext3);
-  int dihf (int gh);
+  //int dihf (int gh);
   int   safegets(char *buffer,int n);
   int getshc(char file[PATH], int iflag, long strec, int nmax_of_gh, int gh);
 
@@ -1159,19 +1160,37 @@ int main(int argc, char**argv)
       /* Do the first calculations */
       shval3(igdgc, latitude, longitude, alt, nmax, 3,
              IEXT, EXT_COEFF1, EXT_COEFF2, EXT_COEFF3);
-      dihf(3);
+      //Modularised dihf, no more globals
+      //dihf(3);
+      pointComponents xyz;
+      xyz.x = x;
+      xyz.y = y;
+      xyz.z = z;
+      pointField a = dihf(xyz);
+      d = a.d;
+      i = a.i;
+      h = a.h;
+      f = a.f;
+      //
       shval3(igdgc, latitude, longitude, alt, nmax, 4,
              IEXT, EXT_COEFF1, EXT_COEFF2, EXT_COEFF3);
-      dihf(4);
+      //dihf(4);
+      xyz.x = xtemp;
+      xyz.y = ytemp;
+      xyz.z = ztemp;
+      a = dihf(xyz);
+      dtemp = a.d;
+      itemp = a.i;
+      htemp = a.h;
+      ftemp = a.f;
+      //
       
-      
-      ddot = ((dtemp - d)*RAD2DEG);
+      ddot = (dtemp - d);
       if (ddot > 180.0) ddot -= 360.0;
       if (ddot <= -180.0) ddot += 360.0;
       ddot *= 60.0;
       
-      idot = ((itemp - i)*RAD2DEG)*60;
-      d = d*(RAD2DEG);   i = i*(RAD2DEG);
+      idot = (itemp - i)*60;
       hdot = htemp - h;   xdot = xtemp - x;
       ydot = ytemp - y;   zdot = ztemp - z;
       fdot = ftemp - f;
@@ -1309,18 +1328,36 @@ int main(int argc, char**argv)
                     }
                   shval3(igdgc, latitude, longitude, alt, nmax, 3,
                          IEXT, EXT_COEFF1, EXT_COEFF2, EXT_COEFF3);
-                  dihf(3);
+                  //dihf(3);
+                  pointComponents xyz;
+                  xyz.x = x;
+                  xyz.y = y;
+                  xyz.z = z;
+                  pointField a = dihf(xyz);
+                  d = a.d;
+                  i = a.i;
+                  h = a.h;
+                  f = a.f;
+                  //
                   shval3(igdgc, latitude, longitude, alt, nmax, 4,
                          IEXT, EXT_COEFF1, EXT_COEFF2, EXT_COEFF3);
-                  dihf(4);
-                  
-                  ddot = ((dtemp - d)*RAD2DEG);
+                  //dihf(4);
+                  xyz.x = xtemp;
+                  xyz.y = ytemp;
+                  xyz.z = ztemp;
+                  a = dihf(xyz);
+                  dtemp = a.d;
+                  itemp = a.i;
+                  htemp = a.h;
+                  ftemp = a.f;
+                  //
+
+                  ddot = dtemp - d;
                   if (ddot > 180.0) ddot -= 360.0;
                   if (ddot <= -180.0) ddot += 360.0;
                   ddot *= 60.0;
                   
-                  idot = ((itemp - i)*RAD2DEG)*60.;
-                  d = d*(RAD2DEG);   i = i*(RAD2DEG);
+                  idot = (itemp - i)*60.;
                   hdot = htemp - h;   xdot = xtemp - x;
                   ydot = ytemp - y;   zdot = ztemp - z;
                   fdot = ftemp - f;
@@ -2360,7 +2397,7 @@ int shval3(int igdgc, double flat, double flon, double elev, int nmax,
 /****************************************************************************/
 
 //note: should be member function of point-declination class
-
+/*
 int dihf (int gh)
 {
   int ios;
@@ -2456,3 +2493,4 @@ int dihf (int gh)
     }
   return(ios);
 }
+*/
