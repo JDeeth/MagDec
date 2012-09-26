@@ -355,7 +355,7 @@ int main(int argc, char**argv)
                          double ddot, double idot, double hdot, double xdot, double ydot, double zdot, double fdot);
   double degrees_to_decimal(int deg, int min, int sec);
   double julday(int month, int day, int year);
-  int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2, int gh);
+  //int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2, int gh);
   int extrapsh(double date, double dte1, int nmax1, int nmax2, int gh);
   int   safegets(char *buffer,int n);
   int getshc(char file[PATH], int iflag, long strec, int nmax_of_gh, int gh);
@@ -1132,9 +1132,11 @@ int main(int argc, char**argv)
           getshc(mdfile, 1, irec_pos[modelI], max1[modelI], 1);
           getshc(mdfile, 1, irec_pos[modelI+1], max1[modelI+1], 2);
           nmax = interpsh(sdate, yrmin[modelI], max1[modelI],
-                          yrmin[modelI+1], max1[modelI+1], 3);
+                          yrmin[modelI+1], max1[modelI+1],
+                          &gha[0], &gh1[0], &gh2[0]);
           nmax = interpsh(sdate+1, yrmin[modelI] , max1[modelI],
-                          yrmin[modelI+1], max1[modelI+1],4);
+                          yrmin[modelI+1], max1[modelI+1],
+                          &ghb[0], &gh1[0], &gh2[0]);
         }
       else
         {
@@ -1298,9 +1300,11 @@ int main(int argc, char**argv)
                       getshc(mdfile, 1, irec_pos[modelI], max1[modelI], 1);
                       getshc(mdfile, 1, irec_pos[modelI+1], max1[modelI+1], 2);
                       nmax = interpsh(syr, yrmin[modelI], max1[modelI],
-                                      yrmin[modelI+1], max1[modelI+1], 3);
+                                      yrmin[modelI+1], max1[modelI+1],
+                                      &gha[0], &gh1[0], &gh2[0]);
                       nmax = interpsh(syr+1, yrmin[modelI] , max1[modelI],
-                                      yrmin[modelI+1], max1[modelI+1],4);
+                                      yrmin[modelI+1], max1[modelI+1],
+                                      &ghb[0], &gh1[0], &gh2[0]);
                     }
                   else
                     {
@@ -1956,42 +1960,42 @@ int extrapsh(double date, double dte1, int nmax1, int nmax2, int gh)
   return(nmax);
 }
 
-/****************************************************************************/
-/*                                                                          */
-/*                           Subroutine interpsh                            */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*     Interpolates linearly, in time, between two spherical harmonic       */
-/*     models.                                                              */
-/*                                                                          */
-/*     Input:                                                               */
-/*           date     - date of resulting model (in decimal year)           */
-/*           dte1     - date of earlier model                               */
-/*           nmax1    - maximum degree and order of earlier model           */
-/*           gh1      - Schmidt quasi-normal internal spherical             */
-/*                      harmonic coefficients of earlier model              */
-/*           dte2     - date of later model                                 */
-/*           nmax2    - maximum degree and order of later model             */
-/*           gh2      - Schmidt quasi-normal internal spherical             */
-/*                      harmonic coefficients of internal model             */
-/*                                                                          */
-/*     Output:                                                              */
-/*           gha or b - coefficients of resulting model                     */
-/*           nmax     - maximum degree and order of resulting model         */
-/*                                                                          */
-/*     FORTRAN                                                              */
-/*           A. Zunde                                                       */
-/*           USGS, MS 964, box 25046 Federal Center, Denver, CO.  80225     */
-/*                                                                          */
-/*     C                                                                    */
-/*           C. H. Shaffer                                                  */
-/*           Lockheed Missiles and Space Company, Sunnyvale CA              */
-/*           August 17, 1988                                                */
-/*                                                                          */
-/****************************************************************************/
+/***************************************************************************
+*                                                                          *
+*                           Subroutine interpsh                            *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*     Interpolates linearly, in time, between two spherical harmonic       *
+*     models.                                                              *
+*                                                                          *
+*     Input:                                                               *
+*           date     - date of resulting model (in decimal year)           *
+*           dte1     - date of earlier model                               *
+*           nmax1    - maximum degree and order of earlier model           *
+*           gh1      - Schmidt quasi-normal internal spherical             *
+*                      harmonic coefficients of earlier model              *
+*           dte2     - date of later model                                 *
+*           nmax2    - maximum degree and order of later model             *
+*           gh2      - Schmidt quasi-normal internal spherical             *
+*                      harmonic coefficients of internal model             *
+*                                                                          *
+*     Output:                                                              *
+*           gha or b - coefficients of resulting model                     *
+*           nmax     - maximum degree and order of resulting model         *
+*                                                                          *
+*     FORTRAN                                                              *
+*           A. Zunde                                                       *
+*           USGS, MS 964, box 25046 Federal Center, Denver, CO.  80225     *
+*                                                                          *
+*     C                                                                    *
+*           C. H. Shaffer                                                  *
+*           Lockheed Missiles and Space Company, Sunnyvale CA              *
+*           August 17, 1988                                                *
+*                                                                          *
+***************************************************************************/
 
-
+/*
 int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2, int gh)
 {
   int   nmax;
@@ -2067,50 +2071,51 @@ int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2, int gh
     }
   return(nmax);
 }
+*/
 
-/****************************************************************************/
-/*                                                                          */
-/*                           Subroutine shval3                              */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*     Calculates field components from spherical harmonic (sh)             */
-/*     models.                                                              */
-/*                                                                          */
-/*     Input:                                                               */
-/*           igdgc     - indicates coordinate system used; set equal        */
-/*                       to 1 if geodetic, 2 if geocentric                  */
-/*           latitude  - north latitude, in degrees                         */
-/*           longitude - east longitude, in degrees                         */
-/*           elev      - WGS84 altitude above ellipsoid (igdgc=1), or       */
-/*                       radial distance from earth's center (igdgc=2)      */
-/*           a2,b2     - squares of semi-major and semi-minor axes of       */
-/*                       the reference spheroid used for transforming       */
-/*                       between geodetic and geocentric coordinates        */
-/*                       or components                                      */
-/*           nmax      - maximum degree and order of coefficients           */
-/*           iext      - external coefficients flag (=0 if none)            */
-/*           ext1,2,3  - the three 1st-degree external coefficients         */
-/*                       (not used if iext = 0)                             */
-/*                                                                          */
-/*     Output:                                                              */
-/*           x         - northward component                                */
-/*           y         - eastward component                                 */
-/*           z         - vertically-downward component                      */
-/*                                                                          */
-/*     based on subroutine 'igrf' by D. R. Barraclough and S. R. C. Malin,  */
-/*     report no. 71/1, institute of geological sciences, U.K.              */
-/*                                                                          */
-/*     FORTRAN                                                              */
-/*           Norman W. Peddie                                               */
-/*           USGS, MS 964, box 25046 Federal Center, Denver, CO.  80225     */
-/*                                                                          */
-/*     C                                                                    */
-/*           C. H. Shaffer                                                  */
-/*           Lockheed Missiles and Space Company, Sunnyvale CA              */
-/*           August 17, 1988                                                */
-/*                                                                          */
-/****************************************************************************/
+/***************************************************************************
+*                                                                          *
+*                           Subroutine shval3                              *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*     Calculates field components from spherical harmonic (sh)             *
+*     models.                                                              *
+*                                                                          *
+*     Input:                                                               *
+*           igdgc     - indicates coordinate system used; set equal        *
+*                       to 1 if geodetic, 2 if geocentric                  *
+*           latitude  - north latitude, in degrees                         *
+*           longitude - east longitude, in degrees                         *
+*           elev      - WGS84 altitude above ellipsoid (igdgc=1), or       *
+*                       radial distance from earth's center (igdgc=2)      *
+*           a2,b2     - squares of semi-major and semi-minor axes of       *
+*                       the reference spheroid used for transforming       *
+*                       between geodetic and geocentric coordinates        *
+*                       or components                                      *
+*           nmax      - maximum degree and order of coefficients           *
+*           iext      - external coefficients flag (=0 if none)            *
+*           ext1,2,3  - the three 1st-degree external coefficients         *
+*                       (not used if iext = 0)                             *
+*                                                                          *
+*     Output:                                                              *
+*           x         - northward component                                *
+*           y         - eastward component                                 *
+*           z         - vertically-downward component                      *
+*                                                                          *
+*     based on subroutine 'igrf' by D. R. Barraclough and S. R. C. Malin,  *
+*     report no. 71/1, institute of geological sciences, U.K.              *
+*                                                                          *
+*     FORTRAN                                                              *
+*           Norman W. Peddie                                               *
+*           USGS, MS 964, box 25046 Federal Center, Denver, CO.  80225     *
+*                                                                          *
+*     C                                                                    *
+*           C. H. Shaffer                                                  *
+*           Lockheed Missiles and Space Company, Sunnyvale CA              *
+*           August 17, 1988                                                *
+*                                                                          *
+****************************************************************************/
 
 /*
 int shval3(int igdgc, double flat, double flon, double elev, int nmax,
@@ -2345,35 +2350,35 @@ int shval3(int igdgc, double flat, double flon, double elev, int nmax,
 }
 */
 
-/****************************************************************************/
-/*                                                                          */
-/*                           Subroutine dihf                                */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*     Computes the geomagnetic d, i, h, and f from x, y, and z.            */
-/*                                                                          */
-/*     Input:                                                               */
-/*           x  - northward component                                       */
-/*           y  - eastward component                                        */
-/*           z  - vertically-downward component                             */
-/*                                                                          */
-/*     Output:                                                              */
-/*           d  - declination                                               */
-/*           i  - inclination                                               */
-/*           h  - horizontal intensity                                      */
-/*           f  - total intensity                                           */
-/*                                                                          */
-/*     FORTRAN                                                              */
-/*           A. Zunde                                                       */
-/*           USGS, MS 964, box 25046 Federal Center, Denver, CO.  80225     */
-/*                                                                          */
-/*     C                                                                    */
-/*           C. H. Shaffer                                                  */
-/*           Lockheed Missiles and Space Company, Sunnyvale CA              */
-/*           August 22, 1988                                                */
-/*                                                                          */
-/****************************************************************************/
+/***************************************************************************
+*                                                                          *
+*                           Subroutine dihf                                *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*     Computes the geomagnetic d, i, h, and f from x, y, and z.            *
+*                                                                          *
+*     Input:                                                               *
+*           x  - northward component                                       *
+*           y  - eastward component                                        *
+*           z  - vertically-downward component                             *
+*                                                                          *
+*     Output:                                                              *
+*           d  - declination                                               *
+*           i  - inclination                                               *
+*           h  - horizontal intensity                                      *
+*           f  - total intensity                                           *
+*                                                                          *
+*     FORTRAN                                                              *
+*           A. Zunde                                                       *
+*           USGS, MS 964, box 25046 Federal Center, Denver, CO.  80225     *
+*                                                                          *
+*     C                                                                    *
+*           C. H. Shaffer                                                  *
+*           Lockheed Missiles and Space Company, Sunnyvale CA              *
+*           August 22, 1988                                                *
+*                                                                          *
+***************************************************************************/
 
 /*
 int dihf (int gh)

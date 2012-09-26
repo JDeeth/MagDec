@@ -285,4 +285,85 @@ pointField dihf (const pointComponents &xyz)
   return(dihf);
 }
 
+/***************************************************************************
+*                                                                          *
+*                           Subroutine interpsh                            *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*     Interpolates linearly, in time, between two spherical harmonic       *
+*     models.                                                              *
+*                                                                          *
+*     Input:                                                               *
+*           date     - date of resulting model (in decimal year)           *
+*           dte1     - date of earlier model                               *
+*           nmax1    - maximum degree and order of earlier model           *
+*           gh1      - Schmidt quasi-normal internal spherical             *
+*                      harmonic coefficients of earlier model              *
+*           dte2     - date of later model                                 *
+*           nmax2    - maximum degree and order of later model             *
+*           gh2      - Schmidt quasi-normal internal spherical             *
+*                      harmonic coefficients of internal model             *
+*                                                                          *
+*     Output:                                                              *
+*           gha or b - coefficients of resulting model                     *
+*           nmax     - maximum degree and order of resulting model         *
+*                                                                          *
+*     FORTRAN                                                              *
+*           A. Zunde                                                       *
+*           USGS, MS 964, box 25046 Federal Center, Denver, CO.  80225     *
+*                                                                          *
+*     C                                                                    *
+*           C. H. Shaffer                                                  *
+*           Lockheed Missiles and Space Company, Sunnyvale CA              *
+*           August 17, 1988                                                *
+*                                                                          *
+***************************************************************************/
+
+
+int interpsh(const double &date, const double &dte1, const int &nmax1,
+             const double &dte2, const int &nmax2,
+             double* gh, const double*const gh1, const double*const gh2)
+{
+  int   nmax;
+  int   k, l;
+  int   ii;
+  double factor;
+
+  factor = (date - dte1) / (dte2 - dte1);
+  if (nmax1 == nmax2)
+    {
+      k =  nmax1 * (nmax1 + 2);
+      nmax = nmax1;
+    }
+  else
+    {
+      if (nmax1 > nmax2)
+        {
+          k = nmax2 * (nmax2 + 2);
+          l = nmax1 * (nmax1 + 2);
+              for ( ii = k + 1; ii <= l; ++ii)
+                {
+                  gh[ii] = gh1[ii] + factor * (-gh1[ii]);
+                }
+          nmax = nmax1;
+        }
+      else
+        {
+          k = nmax1 * (nmax1 + 2);
+          l = nmax2 * (nmax2 + 2);
+              for ( ii = k + 1; ii <= l; ++ii)
+                {
+                  gh[ii] = factor * gh2[ii];
+                }
+          nmax = nmax2;
+        }
+    }
+      for ( ii = 1; ii <= k; ++ii)
+        {
+          gh[ii] = gh1[ii] + factor * (gh2[ii] - gh1[ii]);
+        }
+  return(nmax);
+}
+
 #endif
