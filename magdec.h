@@ -1,7 +1,11 @@
 #ifndef MAGDEC_H
 #define MAGDEC_H
 
-#include <math.h> 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <math.h>
 
 int my_isnan(double d)
 {
@@ -17,6 +21,33 @@ const double EXT_COEFF1 = 0, EXT_COEFF2 = 0, EXT_COEFF3 = 0;
 
 const int MAXDEG = 13;
 const int MAXCOEFF = (MAXDEG*(MAXDEG+2)+1); //index starts with 1!, (from old Fortran?)
+
+#ifndef SEEK_SET //for file loading purposes
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+#endif
+
+const int IEXT = 0;
+const int FALSE = 0;
+const int TRUE = 1;
+const int RECL = 81;
+
+//#define MAXINBUFF RECL+14
+const int MAXINBUFF = RECL + 14;
+/** Max size of in buffer **/
+
+//#define MAXREAD MAXINBUFF-2
+const int MAXREAD = MAXINBUFF - 2;
+/** Max to read 2 less than total size (just to be safe) **/
+
+//#define MAXMOD 30
+const int MAXMOD = 30;
+/** Max number of models in a file **/
+
+//#define PATH MAXREAD
+const int PATH = MAXREAD;
+/** Max path and filename length **/
 
 struct pointCoords {
   double lat, lon, elev; //latitude, longitude (degrees),
@@ -35,6 +66,87 @@ struct pointField {
   double h; //horizontal field strength
   double f; //total field strength
 };
+
+/***************************************************************************
+*                                                                          *
+*                           Subroutine getshc                              *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*     Reads spherical harmonic coefficients from the specified             *
+*     model into an array.                                                 *
+*                                                                          *
+*     Input:                                                               *
+*           stream     - Logical unit number                               *
+*           iflag      - Flag for SV equal to ) or not equal to 0          *
+*                        for designated read statements                    *
+*           strec      - Starting record number to read from model         *
+*           nmax_of_gh - Maximum degree and order of model                 *
+*                                                                          *
+*     Output:                                                              *
+*           gh1 or 2   - Schmidt quasi-normal internal spherical           *
+*                        harmonic coefficients                             *
+*                                                                          *
+*     FORTRAN                                                              *
+*           Bill Flanagan                                                  *
+*           NOAA CORPS, DESDIS, NGDC, 325 Broadway, Boulder CO.  80301     *
+*                                                                          *
+*     C                                                                    *
+*           C. H. Shaffer                                                  *
+*           Lockheed Missiles and Space Company, Sunnyvale CA              *
+*           August 15, 1988                                                *
+*                                                                          *
+***************************************************************************/
+
+int getshc(FILE *stream, char file[PATH], int iflag, long strec, int nmax_of_gh, double* gh)
+{
+  char  inbuff[MAXINBUFF];
+  int ii,m,n,mm,nn;
+  double g,hh;
+
+  stream = fopen(file, "rt");
+  if (stream == NULL)
+    {
+      printf("\nError on opening file %s", file);
+    }
+  else
+    {
+      ii = 0;
+      fseek(stream,strec,SEEK_SET);
+      for ( nn = 1; nn <= nmax_of_gh; ++nn)
+        {
+          for (mm = 0; mm <= nn; ++mm)
+            {
+              if (iflag == 1)
+                {
+                  fgets(inbuff, MAXREAD, stream);
+                  sscanf(inbuff, "%d %d %lg %lg %*lg %*lg %*s %*d",
+                         &n, &m, &g, &hh); //%*x is identified and ignored
+                }
+              else
+                {
+                  fgets(inbuff, MAXREAD, stream);
+                  sscanf(inbuff, "%d %d %*lg %*lg %lg %lg %*s %*d",
+                         &n, &m, &g, &hh);
+                }
+              if ((nn != n) || (mm != m))
+                {
+                  fclose(stream);
+                  return(-2);
+                }
+              ++ii;
+              gh[ii] = g;
+              if (m != 0)
+                {
+                  ++ii;
+                  gh[ii] = hh;
+                }
+            }
+        }
+    }
+  fclose(stream);
+  return(0);
+}
 
 /***************************************************************************
 *                                                                          *

@@ -1,143 +1,109 @@
 
-/****************************************************************************/
-/*                                                                          */
-/*     NGDC's Geomagnetic Field Modeling software for the IGRF and WMM      */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*     Disclaimer: This program has undergone limited testing. It is        */
-/*     being distributed unoffically. The National Geophysical Data         */
-/*     Center does not guarantee it's correctness.                          */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*     Version 7.0:                                                         */
-/*     - input file format changed to                                       */
-/*            -- accept new DGRF2005 coeffs with 0.01 nT precision          */
-/*            -- make sure all values are separated by blanks               */
-/*            -- swapped n and m: first is degree, second is order          */
-/*     - new my_isnan function improves portablility                        */
-/*     - corrected feet to km conversion factor                             */
-/*     - fixed date conversion errors for yyyy,mm,dd format                 */
-/*     - fixed lon/lat conversion errors for deg,min,sec format             */
-/*     - simplified leap year identification                                */
-/*     - changed comment: units of ddot and idot are arc-min/yr             */
-/*     - added note that this program computes the secular variation as     */
-/*            the 1-year difference, rather than the instantaneous change,  */
-/*            which can be slightly different                               */
-/*     - clarified that height is above ellipsoid, not above mean sea level */
-/*            although the difference is negligible for magnetics           */
-/*     - changed main(argv,argc) to usual definition main(argc,argv)        */
-/*     - corrected rounding of angles close to 60 minutes                   */
-/*     Thanks to all who provided bug reports and suggested fixes           */
-/*                                                                          */
-/*                                          Stefan Maus Jan-25-2010         */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*     Version 6.1:                                                         */
-/*     Included option to read coordinates from a file and output the       */
-/*     results to a new file, repeating the input and adding columns        */
-/*     for the output                                                       */
-/*                                          Stefan Maus Jan-31-2008         */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*     Version 6.0:                                                         */
-/*     Bug fixes for the interpolation between models. Also added warnings  */
-/*     for declination at low H and corrected behaviour at geogr. poles.    */
-/*     Placed print-out commands into separate routines to facilitate       */
-/*     fine-tuning of the tables                                            */
-/*                                          Stefan Maus Aug-24-2004         */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*      This program calculates the geomagnetic field values from           */
-/*      a spherical harmonic model.  Inputs required by the user are:       */
-/*      a spherical harmonic model data file, coordinate preference,        */
-/*      altitude, date/range-step, latitude, and longitude.                 */
-/*                                                                          */
-/*         Spherical Harmonic                                               */
-/*         Model Data File       :  Name of the data file containing the    */
-/*                                  spherical harmonic coefficients of      */
-/*                                  the chosen model.  The model and path   */
-/*                                  must be less than PATH chars.           */
-/*                                                                          */
-/*         Coordinate Preference :  Geodetic (WGS84 latitude and altitude   */
-/*                                  above ellipsoid (WGS84),                */
-/*                                  or geocentric (spherical, altitude      */
-/*                                  measured from the center of the Earth). */
-/*                                                                          */
-/*         Altitude              :  Altitude above ellipsoid (WGS84). The   */
-/*                                  program asks for altitude above mean    */
-/*                                  sea level, because the altitude above   */
-/*                                  ellipsoid is not known to most users.   */
-/*                                  The resulting error is very small and   */
-/*                                  negligible for most practical purposes. */
-/*                                  If geocentric coordinate preference is  */
-/*                                  used, then the altitude must be in the  */
-/*                                  range of 6370.20 km - 6971.20 km as     */
-/*                                  measured from the center of the earth.  */
-/*                                  Enter altitude in kilometers, meters,   */
-/*                                  or feet                                 */
-/*                                                                          */
-/*         Date                  :  Date, in decimal years, for which to    */
-/*                                  calculate the values of the magnetic    */
-/*                                  field.  The date must be within the     */
-/*                                  limits of the model chosen.             */
-/*                                                                          */
-/*         Latitude              :  Entered in decimal degrees in the       */
-/*                                  form xxx.xxx.  Positive for northern    */
-/*                                  hemisphere, negative for the southern   */
-/*                                  hemisphere.                             */
-/*                                                                          */
-/*         Longitude             :  Entered in decimal degrees in the       */
-/*                                  form xxx.xxx.  Positive for eastern     */
-/*                                  hemisphere, negative for the western    */
-/*                                  hemisphere.                             */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*      Subroutines called :  degrees_to_decimal,julday,getshc,interpsh,    */
-/*                            extrapsh,shval3,dihf,safegets                 */
-/*                                                                          */
-/****************************************************************************/
+/***************************************************************************
+*                                                                          *
+*     NGDC's Geomagnetic Field Modeling software for the IGRF and WMM      *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*     Disclaimer: This program has undergone limited testing. It is        *
+*     being distributed unoffically. The National Geophysical Data         *
+*     Center does not guarantee it's correctness.                          *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*     Version 7.0:                                                         *
+*     - input file format changed to                                       *
+*            -- accept new DGRF2005 coeffs with 0.01 nT precision          *
+*            -- make sure all values are separated by blanks               *
+*            -- swapped n and m: first is degree, second is order          *
+*     - new my_isnan function improves portablility                        *
+*     - corrected feet to km conversion factor                             *
+*     - fixed date conversion errors for yyyy,mm,dd format                 *
+*     - fixed lon/lat conversion errors for deg,min,sec format             *
+*     - simplified leap year identification                                *
+*     - changed comment: units of ddot and idot are arc-min/yr             *
+*     - added note that this program computes the secular variation as     *
+*            the 1-year difference, rather than the instantaneous change,  *
+*            which can be slightly different                               *
+*     - clarified that height is above ellipsoid, not above mean sea level *
+*            although the difference is negligible for magnetics           *
+*     - changed main(argv,argc) to usual definition main(argc,argv)        *
+*     - corrected rounding of angles close to 60 minutes                   *
+*     Thanks to all who provided bug reports and suggested fixes           *
+*                                                                          *
+*                                          Stefan Maus Jan-25-2010         *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*     Version 6.1:                                                         *
+*     Included option to read coordinates from a file and output the       *
+*     results to a new file, repeating the input and adding columns        *
+*     for the output                                                       *
+*                                          Stefan Maus Jan-31-2008         *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*     Version 6.0:                                                         *
+*     Bug fixes for the interpolation between models. Also added warnings  *
+*     for declination at low H and corrected behaviour at geogr. poles.    *
+*     Placed print-out commands into separate routines to facilitate       *
+*     fine-tuning of the tables                                            *
+*                                          Stefan Maus Aug-24-2004         *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*      This program calculates the geomagnetic field values from           *
+*      a spherical harmonic model.  Inputs required by the user are:       *
+*      a spherical harmonic model data file, coordinate preference,        *
+*      altitude, date/range-step, latitude, and longitude.                 *
+*                                                                          *
+*         Spherical Harmonic                                               *
+*         Model Data File       :  Name of the data file containing the    *
+*                                  spherical harmonic coefficients of      *
+*                                  the chosen model.  The model and path   *
+*                                  must be less than PATH chars.           *
+*                                                                          *
+*         Coordinate Preference :  Geodetic (WGS84 latitude and altitude   *
+*                                  above ellipsoid (WGS84),                *
+*                                  or geocentric (spherical, altitude      *
+*                                  measured from the center of the Earth). *
+*                                                                          *
+*         Altitude              :  Altitude above ellipsoid (WGS84). The   *
+*                                  program asks for altitude above mean    *
+*                                  sea level, because the altitude above   *
+*                                  ellipsoid is not known to most users.   *
+*                                  The resulting error is very small and   *
+*                                  negligible for most practical purposes. *
+*                                  If geocentric coordinate preference is  *
+*                                  used, then the altitude must be in the  *
+*                                  range of 6370.20 km - 6971.20 km as     *
+*                                  measured from the center of the earth.  *
+*                                  Enter altitude in kilometers, meters,   *
+*                                  or feet                                 *
+*                                                                          *
+*         Date                  :  Date, in decimal years, for which to    *
+*                                  calculate the values of the magnetic    *
+*                                  field.  The date must be within the     *
+*                                  limits of the model chosen.             *
+*                                                                          *
+*         Latitude              :  Entered in decimal degrees in the       *
+*                                  form xxx.xxx.  Positive for northern    *
+*                                  hemisphere, negative for the southern   *
+*                                  hemisphere.                             *
+*                                                                          *
+*         Longitude             :  Entered in decimal degrees in the       *
+*                                  form xxx.xxx.  Positive for eastern     *
+*                                  hemisphere, negative for the western    *
+*                                  hemisphere.                             *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*      Subroutines called :  degrees_to_decimal,julday,getshc,interpsh,    *
+*                            extrapsh,shval3,dihf,safegets                 *
+*                                                                          *
+***************************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <math.h> 
-
-//code moved into other files
 #include "magdec.h"
-
-#ifndef SEEK_SET //for file loading purposes
-#define SEEK_SET 0
-#define SEEK_CUR 1
-#define SEEK_END 2
-#endif
-
-const int IEXT = 0;
-const int FALSE = 0;
-const int TRUE = 1;
-const int RECL = 81;
-
-//#define MAXINBUFF RECL+14
-const int MAXINBUFF = RECL + 14;
-/** Max size of in buffer **/
-
-//#define MAXREAD MAXINBUFF-2
-const int MAXREAD = MAXINBUFF - 2;
-/** Max to read 2 less than total size (just to be safe) **/
-
-//#define MAXMOD 30
-const int MAXMOD = 30;
-/** Max number of models in a file **/
-
-//#define PATH MAXREAD
-const int PATH = MAXREAD;
-/** Max path and filename length **/
 
 double gh1[MAXCOEFF];
 double gh2[MAXCOEFF];
@@ -150,116 +116,115 @@ double xtemp,ytemp,ztemp;
 
 FILE *stream = NULL;                /* Pointer to specified model data file */
 
-/****************************************************************************/
-/*                                                                          */
-/*                             Program Geomag                               */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*      This program, originally written in FORTRAN, was developed using    */
-/*      subroutines written by                                              */
-/*      A. Zunde                                                            */
-/*      USGS, MS 964, Box 25046 Federal Center, Denver, Co.  80225          */
-/*      and                                                                 */
-/*      S.R.C. Malin & D.R. Barraclough                                     */
-/*      Institute of Geological Sciences, United Kingdom.                   */
-/*                                                                          */
-/*      Translated                                                          */
-/*      into C by    : Craig H. Shaffer                                     */
-/*                     29 July, 1988                                        */
-/*                                                                          */
-/*      Rewritten by : David Owens                                          */
-/*                     For Susan McLean                                     */
-/*                                                                          */
-/*      Maintained by: Stefan Maus                                          */
-/*      Contact      : stefan.maus@noaa.gov                                 */
-/*                     National Geophysical Data Center                     */
-/*                     World Data Center-A for Solid Earth Geophysics       */
-/*                     NOAA, E/GC1, 325 Broadway,                           */
-/*                     Boulder, CO  80303                                   */
-/*                                                                          */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*      Some variables used in this program                                 */
-/*                                                                          */
-/*    Name         Type                    Usage                            */
-/* ------------------------------------------------------------------------ */
-/*                                                                          */
-/*   a2,b2      Scalar Double          Squares of semi-major and semi-minor */
-/*                                     axes of the reference spheroid used  */
-/*                                     for transforming between geodetic or */
-/*                                     geocentric coordinates.              */
-/*                                                                          */
-/*   minalt     Double array of MAXMOD Minimum height of model.             */
-/*                                                                          */
-/*   altmin     Double                 Minimum height of selected model.    */
-/*                                                                          */
-/*   altmax     Double array of MAXMOD Maximum height of model.             */
-/*                                                                          */
-/*   maxalt     Double                 Maximum height of selected model.    */
-/*                                                                          */
-/*   d          Scalar Double          Declination of the field from the    */
-/*                                     geographic north (deg).              */
-/*                                                                          */
-/*   sdate      Scalar Double          start date inputted                  */
-/*                                                                          */
-/*   ddot       Scalar Double          annual rate of change of decl.       */
-/*                                     (arc-min/yr)                         */
-/*                                                                          */
-/*   alt        Scalar Double          altitude above WGS84 Ellipsoid       */
-/*                                                                          */
-/*   epoch      Double array of MAXMOD epoch of model.                      */
-/*                                                                          */
-/*   ext        Scalar Double          Three 1st-degree external coeff.     */
-/*                                                                          */
-/*   latitude   Scalar Double          Latitude.                            */
-/*                                                                          */
-/*   longitude  Scalar Double          Longitude.                           */
-/*                                                                          */
-/*   gh1        Double array           Schmidt quasi-normal internal        */
-/*                                     spherical harmonic coeff.            */
-/*                                                                          */
-/*   gh2        Double array           Schmidt quasi-normal internal        */
-/*                                     spherical harmonic coeff.            */
-/*                                                                          */
-/*   gha        Double array           Coefficients of resulting model.     */
-/*                                                                          */
-/*   ghb        Double array           Coefficients of rate of change model.*/
-/*                                                                          */
-/*   i          Scalar Double          Inclination (deg).                   */
-/*                                                                          */
-/*   idot       Scalar Double          Rate of change of i (arc-min/yr).    */
-/*                                                                          */
-/*   igdgc      Integer                Flag for geodetic or geocentric      */
-/*                                     coordinate choice.                   */
-/*                                                                          */
-/*   inbuff     Char a of MAXINBUF     Input buffer.                        */
-/*                                                                          */
-/*   irec_pos   Integer array of MAXMOD Record counter for header           */
-/*                                                                          */
-/*   stream  Integer                   File handles for an opened file.     */
-/*                                                                          */
-/*   fileline   Integer                Current line in file (for errors)    */
-/*                                                                          */
-/*   max1       Integer array of MAXMOD Main field coefficient.             */
-/*                                                                          */
-/*   max2       Integer array of MAXMOD Secular variation coefficient.      */
-/*                                                                          */
-/*   max3       Integer array of MAXMOD Acceleration coefficient.           */
-/*                                                                          */
-/*   mdfile     Character array of PATH  Model file name.                   */
-/*                                                                          */
-/*   minyr      Double                  Min year of all models              */
-/*                                                                          */
-/*   maxyr      Double                  Max year of all models              */
-/*                                                                          */
-/*   yrmax      Double array of MAXMOD  Max year of model.                  */
-/*                                                                          */
-/*   yrmin      Double array of MAXMOD  Min year of model.                  */
-/*                                                                          */
-/****************************************************************************/
-
+/***************************************************************************
+*                                                                          *
+*                             Program Geomag                               *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*      This program, originally written in FORTRAN, was developed using    *
+*      subroutines written by                                              *
+*      A. Zunde                                                            *
+*      USGS, MS 964, Box 25046 Federal Center, Denver, Co.  80225          *
+*      and                                                                 *
+*      S.R.C. Malin & D.R. Barraclough                                     *
+*      Institute of Geological Sciences, United Kingdom.                   *
+*                                                                          *
+*      Translated                                                          *
+*      into C by    : Craig H. Shaffer                                     *
+*                     29 July, 1988                                        *
+*                                                                          *
+*      Rewritten by : David Owens                                          *
+*                     For Susan McLean                                     *
+*                                                                          *
+*      Maintained by: Stefan Maus                                          *
+*      Contact      : stefan.maus@noaa.gov                                 *
+*                     National Geophysical Data Center                     *
+*                     World Data Center-A for Solid Earth Geophysics       *
+*                     NOAA, E/GC1, 325 Broadway,                           *
+*                     Boulder, CO  80303                                   *
+*                                                                          *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*      Some variables used in this program                                 *
+*                                                                          *
+*    Name         Type                    Usage                            *
+* ------------------------------------------------------------------------ *
+*                                                                          *
+*   a2,b2      Scalar Double          Squares of semi-major and semi-minor *
+*                                     axes of the reference spheroid used  *
+*                                     for transforming between geodetic or *
+*                                     geocentric coordinates.              *
+*                                                                          *
+*   minalt     Double array of MAXMOD Minimum height of model.             *
+*                                                                          *
+*   altmin     Double                 Minimum height of selected model.    *
+*                                                                          *
+*   altmax     Double array of MAXMOD Maximum height of model.             *
+*                                                                          *
+*   maxalt     Double                 Maximum height of selected model.    *
+*                                                                          *
+*   d          Scalar Double          Declination of the field from the    *
+*                                     geographic north (deg).              *
+*                                                                          *
+*   sdate      Scalar Double          start date inputted                  *
+*                                                                          *
+*   ddot       Scalar Double          annual rate of change of decl.       *
+*                                     (arc-min/yr)                         *
+*                                                                          *
+*   alt        Scalar Double          altitude above WGS84 Ellipsoid       *
+*                                                                          *
+*   epoch      Double array of MAXMOD epoch of model.                      *
+*                                                                          *
+*   ext        Scalar Double          Three 1st-degree external coeff.     *
+*                                                                          *
+*   latitude   Scalar Double          Latitude.                            *
+*                                                                          *
+*   longitude  Scalar Double          Longitude.                           *
+*                                                                          *
+*   gh1        Double array           Schmidt quasi-normal internal        *
+*                                     spherical harmonic coeff.            *
+*                                                                          *
+*   gh2        Double array           Schmidt quasi-normal internal        *
+*                                     spherical harmonic coeff.            *
+*                                                                          *
+*   gha        Double array           Coefficients of resulting model.     *
+*                                                                          *
+*   ghb        Double array           Coefficients of rate of change model.*
+*                                                                          *
+*   i          Scalar Double          Inclination (deg).                   *
+*                                                                          *
+*   idot       Scalar Double          Rate of change of i (arc-min/yr).    *
+*                                                                          *
+*   igdgc      Integer                Flag for geodetic or geocentric      *
+*                                     coordinate choice.                   *
+*                                                                          *
+*   inbuff     Char a of MAXINBUF     Input buffer.                        *
+*                                                                          *
+*   irec_pos   Integer array of MAXMOD Record counter for header           *
+*                                                                          *
+*   stream  Integer                   File handles for an opened file.     *
+*                                                                          *
+*   fileline   Integer                Current line in file (for errors)    *
+*                                                                          *
+*   max1       Integer array of MAXMOD Main field coefficient.             *
+*                                                                          *
+*   max2       Integer array of MAXMOD Secular variation coefficient.      *
+*                                                                          *
+*   max3       Integer array of MAXMOD Acceleration coefficient.           *
+*                                                                          *
+*   mdfile     Character array of PATH  Model file name.                   *
+*                                                                          *
+*   minyr      Double                  Min year of all models              *
+*                                                                          *
+*   maxyr      Double                  Max year of all models              *
+*                                                                          *
+*   yrmax      Double array of MAXMOD  Max year of model.                  *
+*                                                                          *
+*   yrmin      Double array of MAXMOD  Min year of model.                  *
+*                                                                          *
+***************************************************************************/
 
 int main(int argc, char**argv)
 {
@@ -358,7 +323,7 @@ int main(int argc, char**argv)
   //int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2, int gh);
   //int extrapsh(double date, double dte1, int nmax1, int nmax2, int gh);
   int   safegets(char *buffer,int n);
-  int getshc(char file[PATH], int iflag, long strec, int nmax_of_gh, int gh);
+  //int getshc(char file[PATH], int iflag, long strec, int nmax_of_gh, int gh);
 
   /* Initializations. */
   
@@ -1129,8 +1094,8 @@ int main(int argc, char**argv)
       
       if (max2[modelI] == 0)
         {
-          getshc(mdfile, 1, irec_pos[modelI], max1[modelI], 1);
-          getshc(mdfile, 1, irec_pos[modelI+1], max1[modelI+1], 2);
+          getshc(stream, mdfile, 1, irec_pos[modelI], max1[modelI], &gh1[0]);
+          getshc(stream, mdfile, 1, irec_pos[modelI+1], max1[modelI+1],  &gh2[0]);
           nmax = interpsh(sdate, yrmin[modelI], max1[modelI],
                           yrmin[modelI+1], max1[modelI+1],
                           &gha[0], &gh1[0], &gh2[0]);
@@ -1140,8 +1105,8 @@ int main(int argc, char**argv)
         }
       else
         {
-          getshc(mdfile, 1, irec_pos[modelI], max1[modelI], 1);
-          getshc(mdfile, 0, irec_pos[modelI], max2[modelI], 2);
+          getshc(stream, mdfile, 1, irec_pos[modelI], max1[modelI], &gh1[0]);
+          getshc(stream, mdfile, 0, irec_pos[modelI], max2[modelI], &gh2[0]);
           nmax = extrapsh(sdate, epoch[modelI], max1[modelI], max2[modelI],
                           &gha[0], &gh1[0], &gh2[0]);
           nmax = extrapsh(sdate+1, epoch[modelI], max1[modelI], max2[modelI],
@@ -1299,8 +1264,8 @@ int main(int argc, char**argv)
                   
                   if (max2[modelI] == 0)       /*If still not last element */
                     {
-                      getshc(mdfile, 1, irec_pos[modelI], max1[modelI], 1);
-                      getshc(mdfile, 1, irec_pos[modelI+1], max1[modelI+1], 2);
+                      getshc(stream, mdfile, 1, irec_pos[modelI], max1[modelI], &gh1[0]);
+                      getshc(stream, mdfile, 1, irec_pos[modelI+1], max1[modelI+1], &gh2[0]);
                       nmax = interpsh(syr, yrmin[modelI], max1[modelI],
                                       yrmin[modelI+1], max1[modelI+1],
                                       &gha[0], &gh1[0], &gh2[0]);
@@ -1310,8 +1275,8 @@ int main(int argc, char**argv)
                     }
                   else
                     {
-                      getshc(mdfile, 1, irec_pos[modelI], max1[modelI], 1);
-                      getshc(mdfile, 0, irec_pos[modelI], max2[modelI], 2);
+                      getshc(stream, mdfile, 1, irec_pos[modelI], max1[modelI], &gh1[0]);
+                      getshc(stream, mdfile, 0, irec_pos[modelI], max2[modelI], &gh2[0]);
                       nmax = extrapsh(syr, epoch[modelI], max1[modelI], max2[modelI],
                                       &gha[0], &gh1[0], &gh2[0]);
                       nmax = extrapsh(syr+1, epoch[modelI], max1[modelI], max2[modelI],
@@ -1625,25 +1590,26 @@ void print_result_file(FILE *outf, double d, double i, double h, double x, doubl
 } /* print_result_file */
 
 
-/****************************************************************************/
-/*                                                                          */
-/*                       Subroutine safegets                                */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*  Gets characters from stdin untill it has reached n characters or \n,    */
-/*     whichever comes first.  \n is converted to \0.                       */
-/*                                                                          */
-/*  Input: n - Integer number of chars                                      */
-/*         *buffer - Character array ptr which can contain n+1 characters   */
-/*                                                                          */
-/*  Output: size - integer size of sting in buffer                          */
-/*                                                                          */
-/*  Note: All strings will be null terminated.                              */
-/*                                                                          */
-/*  By: David Owens                                                         */
-/*      dio@ngdc.noaa.gov                                                   */
-/****************************************************************************/
+/***************************************************************************
+*                                                                          *
+*                       Subroutine safegets                                *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*  Gets characters from stdin untill it has reached n characters or \n,    *
+*     whichever comes first.  \n is converted to \0.                       *
+*                                                                          *
+*  Input: n - Integer number of chars                                      *
+*         *buffer - Character array ptr which can contain n+1 characters   *
+*                                                                          *
+*  Output: size - integer size of sting in buffer                          *
+*                                                                          *
+*  Note: All strings will be null terminated.                              *
+*                                                                          *
+*  By: David Owens                                                         *
+*      dio@ngdc.noaa.gov                                                   *
+***************************************************************************/
+
 
 int safegets(char *buffer,int n){
   char *ptr;                    /** ptr used for finding '\n' **/
@@ -1661,28 +1627,29 @@ int safegets(char *buffer,int n){
 }
 
 
-/****************************************************************************/
-/*                                                                          */
-/*                       Subroutine degrees_to_decimal                      */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*     Converts degrees,minutes, seconds to decimal degrees.                */
-/*                                                                          */
-/*     Input:                                                               */
-/*            degrees - Integer degrees                                     */
-/*            minutes - Integer minutes                                     */
-/*            seconds - Integer seconds                                     */
-/*                                                                          */
-/*     Output:                                                              */
-/*            decimal - degrees in decimal degrees                          */
-/*                                                                          */
-/*     C                                                                    */
-/*           C. H. Shaffer                                                  */
-/*           Lockheed Missiles and Space Company, Sunnyvale CA              */
-/*           August 12, 1988                                                */
-/*                                                                          */
-/****************************************************************************/
+/***************************************************************************
+*                                                                          *
+*                       Subroutine degrees_to_decimal                      *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*     Converts degrees,minutes, seconds to decimal degrees.                *
+*                                                                          *
+*     Input:                                                               *
+*            degrees - Integer degrees                                     *
+*            minutes - Integer minutes                                     *
+*            seconds - Integer seconds                                     *
+*                                                                          *
+*     Output:                                                              *
+*            decimal - degrees in decimal degrees                          *
+*                                                                          *
+*     C                                                                    *
+*           C. H. Shaffer                                                  *
+*           Lockheed Missiles and Space Company, Sunnyvale CA              *
+*           August 12, 1988                                                *
+*                                                                          *
+***************************************************************************/
+
 
 double degrees_to_decimal(int degrees,int minutes,int seconds)
 {
@@ -1712,24 +1679,25 @@ double degrees_to_decimal(int degrees,int minutes,int seconds)
   return(decimal);
 }
 
-/****************************************************************************/
-/*                                                                          */
-/*                           Subroutine julday                              */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*     Computes the decimal day of year from month, day, year.              */
-/*     Supplied by Daniel Bergstrom                                         */
-/*                                                                          */
-/* References:                                                              */
-/*                                                                          */
-/* 1. Nachum Dershowitz and Edward M. Reingold, Calendrical Calculations,   */
-/*    Cambridge University Press, 3rd edition, ISBN 978-0-521-88540-9.      */
-/*                                                                          */
-/* 2. Claus Tøndering, Frequently Asked Questions about Calendars,          */
-/*    Version 2.9, http://www.tondering.dk/claus/calendar.html              */
-/*                                                                          */
-/****************************************************************************/
+
+/***************************************************************************
+*                                                                          *
+*                           Subroutine julday                              *
+*                                                                          *
+****************************************************************************
+*                                                                          *
+*     Computes the decimal day of year from month, day, year.              *
+*     Supplied by Daniel Bergstrom                                         *
+*                                                                          *
+* References:                                                              *
+*                                                                          *
+* 1. Nachum Dershowitz and Edward M. Reingold, Calendrical Calculations,   *
+*    Cambridge University Press, 3rd edition, ISBN 978-0-521-88540-9.      *
+*                                                                          *
+* 2. Claus Tøndering, Frequently Asked Questions about Calendars,         *
+*    Version 2.9, http://www.tondering.dk/claus/calendar.html              *
+*                                                                          *
+***************************************************************************/
 
 double julday(int month, int day, int year)
 {
@@ -1741,110 +1709,4 @@ double julday(int month, int day, int year)
   double day_in_year = (days[month - 1] + day + (month > 2 ? leap_year : 0));
 
   return ((double)year + (day_in_year / (365.0 + leap_year)));
-}
-
-
-/****************************************************************************/
-/*                                                                          */
-/*                           Subroutine getshc                              */
-/*                                                                          */
-/****************************************************************************/
-/*                                                                          */
-/*     Reads spherical harmonic coefficients from the specified             */
-/*     model into an array.                                                 */
-/*                                                                          */
-/*     Input:                                                               */
-/*           stream     - Logical unit number                               */
-/*           iflag      - Flag for SV equal to ) or not equal to 0          */
-/*                        for designated read statements                    */
-/*           strec      - Starting record number to read from model         */
-/*           nmax_of_gh - Maximum degree and order of model                 */
-/*                                                                          */
-/*     Output:                                                              */
-/*           gh1 or 2   - Schmidt quasi-normal internal spherical           */
-/*                        harmonic coefficients                             */
-/*                                                                          */
-/*     FORTRAN                                                              */
-/*           Bill Flanagan                                                  */
-/*           NOAA CORPS, DESDIS, NGDC, 325 Broadway, Boulder CO.  80301     */
-/*                                                                          */
-/*     C                                                                    */
-/*           C. H. Shaffer                                                  */
-/*           Lockheed Missiles and Space Company, Sunnyvale CA              */
-/*           August 15, 1988                                                */
-/*                                                                          */
-/****************************************************************************/
-
-
-int getshc(char file[PATH], int iflag, long strec, int nmax_of_gh, int gh)
-//char file[PATH];
-{
-  char  inbuff[MAXINBUFF];
-  char irat[9];
-  int ii,m,n,mm,nn;
-  int ios;
-  int line_num;
-  double g,hh;
-  double trash;
-  
-  stream = fopen(file, "rt");
-  if (stream == NULL)
-    {
-      printf("\nError on opening file %s", file);
-    }
-  else
-    {
-      ii = 0;
-      ios = 0;
-      fseek(stream,strec,SEEK_SET);
-      for ( nn = 1; nn <= nmax_of_gh; ++nn)
-        {
-          for (mm = 0; mm <= nn; ++mm)
-            {
-              if (iflag == 1)
-                {
-                  fgets(inbuff, MAXREAD, stream);
-                  sscanf(inbuff, "%d%d%lg%lg%lg%lg%s%d",
-                         &n, &m, &g, &hh, &trash, &trash, irat, &line_num);
-                }
-              else
-                {
-                  fgets(inbuff, MAXREAD, stream);
-                  sscanf(inbuff, "%d%d%lg%lg%lg%lg%s%d",
-                         &n, &m, &trash, &trash, &g, &hh, irat, &line_num);
-                }
-              if ((nn != n) || (mm != m))
-                {
-                  ios = -2;
-                  fclose(stream);
-                  return(ios);
-                }
-              ii = ii + 1;
-              switch(gh)
-                {
-                case 1:  gh1[ii] = g;
-                  break;
-                case 2:  gh2[ii] = g;
-                  break;
-                default: printf("\nError in subroutine getshc");
-                  break;
-                }
-              if (m != 0)
-                {
-                  ii = ii+ 1;
-                  switch(gh)
-                    {
-                    case 1:  gh1[ii] = hh;
-                      break;
-                    case 2:  gh2[ii] = hh;
-                      break;
-                    default: printf("\nError in subroutine getshc");
-                      break;
-                    }
-                }
-            }
-        }
-    }
-  fclose(stream);
-  return(ios);
 }
