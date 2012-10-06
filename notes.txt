@@ -1,0 +1,35 @@
+internally uses decimal degrees
+
+GeoMag functions
+
+main()
+	parses command-line arguments
+	reads data file
+	digests startdate
+	gets decimal lat/lon
+	calls subroutines
+	displays outputs from global variables
+	
+double julday(month, day, year)
+	returns date as decimal fraction of a year
+	
+int getshc
+	returns Schmidt Quasi-Normal Internal Spherical Harmonic Coefficients
+	from datafile
+	writes to globals gh1 and gh2
+	
+extrapsh(date, gh1, gh2)
+	Extrapolates linearly a spherical harmonic model with rate-of-change model
+	returns gha/ghb
+
+interpsh
+	interpolates linearly, in time, between two sperical harmonic models
+
+shval3
+	Calculates field components from spherical harmonic models
+	Returns x, y, z components of field
+
+dihf
+	Calculates d, i, h, f from x,y,z
+	(Declination,  Inclination, H Intensity, Total Intensity)
+	

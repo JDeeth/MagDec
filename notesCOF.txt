@@ -1,0 +1,27 @@
+All lines must have exactly 80 characters including whitespace, then CR & LF.
+
+If first three characters are spaces, the line marks the start of a new model.
+
+   IGRF2010  2010.00 13  8  0 2010.00 2015.00   -1.0  600.0         IGRF2010   0
+   |- model[i]
+                 |- epoch[i]
+                      |- max1[i]      number of pairs in first set of g,h columns (base)
+					     |- max2[i]		number of pairs in second set of columns (rate of change)
+						    |- max3[i]	number of pairs in third set of columns (second derivative?)
+								  |- yrmin[i]
+										  |- yrmax[i]
+												  |- altmin[i]
+														 |- altmax[i]
+
+1  0 -29496.50      0.00     11.40      0.00                       IGRF2010   1
+|- n
+   |- m
+		   |- g (base)
+					 |- h
+							   |- g (rate of change per year)
+										 |- h
+
+n and m increase in a pattern to confirm that the lines in input.cof are in the
+correct order. n starts at 1. m starts at 0 and increases by 1 each line. When
+n = m, on the next line n += 1 and m = 0. The pattern is 1 0, 1 1, 2 0, 2 1, 2 2, 3 0
+

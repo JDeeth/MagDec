@@ -107,12 +107,12 @@
 
 double gh1[MAXCOEFF];
 double gh2[MAXCOEFF];
-double gha[MAXCOEFF];              /* Geomag global variables */
+double gha[MAXCOEFF];              // Geomag global variables
 double ghb[MAXCOEFF];
 pointField gField, gFieldTemp;
 pointComponents gComp, gCompTemp;
 
-FILE *stream = NULL;                /* Pointer to specified model data file */
+FILE *stream = NULL;                // Pointer to specified model data file
 
 /***************************************************************************
 *                                                                          *
@@ -229,44 +229,44 @@ int main(int argc, char**argv)
 #ifdef MAC
   ccommand(argc, argv);
 #endif
-  /*  Variable declaration  */
+  //*  Variable declaration  *
 
-  /* Control variables */
+  //* Control variables *
   int   again = 1;
   int   decyears = 3;
-  int   units = 4;
-  int   decdeg = 3;
+  int   units = 4;    //input units. 1:km, 2:metres, 3:feet
+  int   decdeg = 3;   //input units. 1:decimal degrees, 2: DMS
   int   range = -1;
   int   counter = 0;
   int   warn_H, warn_H_strong, warn_P;
 
-  int   modelI;             /* Which model (Index) */
-  int   nmodel;             /* Number of models in file */
+  int   modelI;             // Which model in file, zero indexed
+  int   nmodel;             //* Number of models in file *
   int   max1[MAXMOD];
   int   max2[MAXMOD];
   int   max3[MAXMOD];
   int   nmax;
-  int   igdgc=3;
+  int   igdgc=3; // geoid model selection. 1: geodetic (land), 2: geocentric (space)
   int   isyear=-1;
   int   ismonth=-1;
   int   isday=-1;
   int   ieyear=-1;
   int   iemonth=-1;
   int   ieday=-1;
-  int   ilat_deg=200;
+  int   ilat_deg=200; //temporary values if DMS input selected
   int   ilat_min=200;
   int   ilat_sec=200;
   int   ilon_deg=200;
   int   ilon_min=200;
   int   ilon_sec=200;
-  int   fileline;
-  long  irec_pos[MAXMOD];
+  int   fileline;  //model reading, for showing errors in file (only use)
+  long  irec_pos[MAXMOD]; //location in model file of the start of each 5-year model
 
   int  coords_from_file = 0;
   int arg_err = 0;
   int need_to_read_model = 1;
 
-  char  mdfile[PATH];
+  char  mdfile[PATH];       //Filename of model file (IRGF11.cof)
   char  inbuff[MAXINBUFF];
   char  model[MAXMOD][9];
   char *begin;
@@ -280,19 +280,19 @@ int main(int argc, char**argv)
   int iline=0;
   int read_flag;
 
-  double epoch[MAXMOD];
+  double epoch[MAXMOD]; //base dates of models in input.cof
   double yrmin[MAXMOD];
   double yrmax[MAXMOD];
   double minyr;
   double maxyr;
   double altmin[MAXMOD];
   double altmax[MAXMOD];
-  double minalt;
-  double maxalt;
-  double sdate=-1;
-  double step=-1;
+  double minalt;  //in km
+  double maxalt;  //in km
+  double sdate=-1; //start date (years)
+  double edate=-1; //end date (years)
+  double step=-1;  //results interval between sdate and edate (years)
   double syr;
-  double edate=-1;
   pointCoords point;
   point.lat=200;
   point.lon=200;
@@ -301,7 +301,7 @@ int main(int argc, char**argv)
   pointComponents gCompDot;
   double warn_H_val, warn_H_strong_val;
 
-  /*  Subroutines used  */
+  //*  Subroutines used  *
 
   void print_dashed_line();
   void print_long_dashed_line(void);
@@ -316,7 +316,7 @@ int main(int argc, char**argv)
   int   safegets(char *buffer,int n);
 
 
-  /* Initializations. */
+  //* Initializations. *
 
   inbuff[MAXREAD+1]='\0';  /* Just to protect mem. */
   inbuff[MAXINBUFF-1]='\0';  /* Just to protect mem. */
@@ -622,7 +622,7 @@ int main(int argc, char**argv)
         printf("What is the name of the model data file to be opened? ==> ");
         safegets(inbuff,MAXREAD);
         strcpy(mdfile, inbuff);
-        if (!(::stream = fopen(mdfile, "rt")))
+        if (!(::stream = fopen(mdfile, "rt"))) // "rt" means readonly, text
           printf("\nError opening file %s.", mdfile);
       }
       rewind(::stream);
@@ -656,7 +656,7 @@ int main(int argc, char**argv)
             exit(6);
           }
 
-          irec_pos[modelI]=ftell(::stream);
+          irec_pos[modelI]=ftell(::stream); //ftell: position in bytes from start of stream
           //* Get fields from buffer into individual vars.  *
           sscanf(inbuff, "%s%lg%d%d%d%lg%lg%lg%lg", model[modelI], &epoch[modelI],
                  &max1[modelI], &max2[modelI], &max3[modelI], &yrmin[modelI],
@@ -1087,8 +1087,11 @@ int main(int argc, char**argv)
     //** This will compute everything needed for 1 point in time. **
 
 
-    if (max2[modelI] == 0)
-    {
+    // This section seems to do the following:
+    // 1- read input.cof and write data to gh1 (this model) and gh2 (next model)
+    // 2- interpolate between gh1 and gh2 to get gha (present value) and ghb (rate of change)
+    if (max2[modelI] == 0) //if not the last model in .cof file?
+    { //then interpolate between this model and the next model
       getshc(::stream, mdfile, 1, irec_pos[modelI], max1[modelI], &::gh1[0]);
       getshc(::stream, mdfile, 1, irec_pos[modelI+1], max1[modelI+1],  &::gh2[0]);
       nmax = interpsh(sdate, yrmin[modelI], max1[modelI],
@@ -1101,7 +1104,7 @@ int main(int argc, char**argv)
     else
     {
       getshc(::stream, mdfile, 1, irec_pos[modelI], max1[modelI], &::gh1[0]);
-      getshc(::stream, mdfile, 0, irec_pos[modelI], max2[modelI], &::gh2[0]);
+      getshc(::stream, mdfile, 0, irec_pos[modelI], max2[modelI], &::gh2[0]); //get data from 2nd set of g,h columns in input.cof
       nmax = extrapsh(sdate, epoch[modelI], max1[modelI], max2[modelI],
                       &::gha[0], &::gh1[0], &::gh2[0]);
       nmax = extrapsh(sdate+1, epoch[modelI], max1[modelI], max2[modelI],
@@ -1112,7 +1115,7 @@ int main(int argc, char**argv)
     //* Do the first calculations *
     gComp = shval3(
               point, nmax,
-              &::gha[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3);
+              &::gha[0], IEXT, EXT_COEFF1,  EXT_COEFF2, EXT_COEFF3); //*ext* all == 0
 
     gField = dihf(gComp);
 
